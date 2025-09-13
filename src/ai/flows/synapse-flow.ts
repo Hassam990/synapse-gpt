@@ -8,17 +8,23 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 import type {AiMode} from '@/app/actions';
+import wav from 'wav';
 
 const SynapseInputSchema = z.object({
   mode: z.enum(['conversation', 'assistance', 'information', 'gpt']),
   prompt: z.string().describe('The user query.'),
+  media: z.string().optional().describe(
+    "Optional media file (e.g., image) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+  ),
 });
 export type SynapseInput = z.infer<typeof SynapseInputSchema>;
 
 const SynapseOutputSchema = z.object({
-  response: z.string().describe('The AI-generated response.'),
+  content: z.string().describe('The AI-generated text response.'),
+  audio: z.string().optional().describe('The AI-generated audio response as a data URI.'),
 });
 export type SynapseOutput = z.infer<typeof SynapseOutputSchema>;
 
@@ -43,6 +49,34 @@ User Message: {{{prompt}}}`,
   gpt: `{{prompt}}`,
 };
 
+
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const synapseFlow = ai.defineFlow(
   {
     name: 'synapseFlow',
@@ -51,11 +85,45 @@ const synapseFlow = ai.defineFlow(
   },
   async (input) => {
     const systemPrompt = prompts[input.mode];
+    const finalPrompt = systemPrompt.replace(/\{\{\{?prompt\}\}\}?/g, input.prompt);
+    
+    const promptParts = [];
+    if (input.media) {
+        promptParts.push({ media: { url: input.media } });
+    }
+    promptParts.push({ text: finalPrompt });
 
-    const {text} = await ai.generate({
-      model: 'googleai/gemini-2.5-flash',
-      prompt: systemPrompt.replace(/\{\{\{?prompt\}\}\}?/g, input.prompt),
-    });
-    return {response: text!};
+    const [textResult, audioResult] = await Promise.all([
+        ai.generate({
+            model: googleAI.model('gemini-2.5-flash'),
+            prompt: promptParts,
+        }),
+        ai.generate({
+            model: googleAI.model('gemini-2.5-flash-preview-tts'),
+            config: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
+                    },
+                },
+            },
+            prompt: input.prompt,
+        })
+    ]);
+
+    const content = textResult.text!;
+    
+    let audioDataUri: string | undefined = undefined;
+    if (audioResult.media) {
+        const audioBuffer = Buffer.from(
+            audioResult.media.url.substring(audioResult.media.url.indexOf(',') + 1),
+            'base64'
+        );
+        const wavBase64 = await toWav(audioBuffer);
+        audioDataUri = 'data:audio/wav;base64,' + wavBase64;
+    }
+
+    return { content, audio: audioDataUri };
   }
 );

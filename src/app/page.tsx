@@ -5,9 +5,6 @@ import {
   SidebarHeader,
   SidebarTrigger,
   SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarFooter,
   SidebarInset,
   SidebarGroup,
@@ -27,38 +24,45 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-
-const recentChats = [
-  { id: 1, title: 'New Chat', date: '9/13/2025' },
-  { id: 2, title: 'AI Origin Question', date: '9/13/2025' },
-  { id: 3, title: 'New Chat', date: '9/13/2025' },
-  { id: 4, title: 'Greeting', date: '9/13/2025' },
-];
+import RecentChats from '@/components/recent-chats';
+import { redirect } from 'next/navigation';
 
 const suggestionCards = [
   {
     icon: Bot,
     title: 'Intelligent Conversations',
     description: 'Real-time AI chat with Pakistani context and cultural understanding',
+    prompt: 'Tell me something interesting about Pakistani culture.',
   },
   {
     icon: Briefcase,
     title: 'Business Solutions',
     description: 'Proposals, market analysis, and business assistance for Pakistani market',
+    prompt: 'Draft a business proposal for a new e-commerce startup in Lahore.',
   },
   {
     icon: GraduationCap,
     title: 'Educational Support',
     description: 'Learning assistance in Urdu and English with local examples',
+    prompt: 'Explain the significance of the Lahore Resolution in simple terms.',
   },
   {
     icon: PenSquare,
     title: 'Creative Writing',
     description: 'Poetry, stories, and content with Pakistani cultural context',
+    prompt: 'Write a short poem about the beauty of the Karakoram Highway.',
   },
 ];
 
 export default function Home() {
+  async function handlePromptSubmit(formData: FormData) {
+    'use server';
+    const prompt = formData.get('prompt') as string;
+    if (prompt) {
+      redirect(`/chat?prompt=${encodeURIComponent(prompt)}`);
+    }
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
@@ -85,19 +89,7 @@ export default function Home() {
             </Link>
             <SidebarGroup className="mt-4 p-0">
               <SidebarGroupLabel className="px-2">Recent Chats</SidebarGroupLabel>
-              <SidebarMenu>
-                {recentChats.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
-                    <SidebarMenuButton className="text-sm font-normal justify-start">
-                      <MessageSquare className="h-4 w-4" />
-                      <div className="flex flex-col items-start">
-                        <span>{chat.title}</span>
-                        <span className="text-xs text-muted-foreground">{chat.date}</span>
-                      </div>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              <RecentChats />
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
@@ -144,18 +136,16 @@ export default function Home() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 w-full max-w-4xl">
                 {suggestionCards.map((card, index) => (
-                  <Link href="/chat" key={index}>
-                    <div className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full">
+                   <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full">
                       <card.icon className="h-6 w-6 text-primary mb-2" />
                       <h3 className="font-semibold text-foreground">{card.title}</h3>
                       <p className="text-sm text-muted-foreground">{card.description}</p>
-                    </div>
                   </Link>
                 ))}
               </div>
             </main>
             <footer className="p-4 w-full max-w-4xl mx-auto">
-              <form action="/chat" className="relative">
+              <form action={handlePromptSubmit} className="relative">
                 <Input
                   name="prompt"
                   placeholder="Write a business proposal for a tech startup in Karachi"

@@ -1,6 +1,6 @@
 "use client";
 
-import { AiMode, invokeAI } from "@/app/actions";
+import { AiMode, invokeAI, Message } from "@/app/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,13 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, User, Send } from "lucide-react";
+import { Bot, User, Send, Paperclip, Mic, StopCircle } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import { useRouter, useSearchParams } from "next/navigation";
+import { useChatHistory } from "@/hooks/use-chat-history";
 
 const modeDetails: Record<
   AiMode,
@@ -57,19 +54,42 @@ const modeDetails: Record<
   },
 };
 
-export default function ChatInterface() {
+export default function ChatInterface({ chatId }: { chatId?: string }) {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const { getChat, addMessage, createChat } = useChatHistory();
 
   useEffect(() => {
-    setMessages([
-      { role: "assistant", content: modeDetails[selectedMode].welcome },
-    ]);
-  }, [selectedMode]);
+    const prompt = searchParams.get('prompt');
+    if (prompt && !chatId) {
+      setInput(prompt);
+      const newChatId = createChat(prompt);
+      router.replace(`/chat/${newChatId}?prompt=${encodeURIComponent(prompt)}`);
+    }
+  }, [searchParams, chatId, createChat, router]);
+  
+  useEffect(() => {
+    if (chatId) {
+      const chat = getChat(chatId);
+      if (chat) {
+        setMessages(chat.messages);
+      } else {
+        router.push('/chat');
+      }
+    } else {
+      setMessages([
+        { role: "assistant", content: modeDetails[selectedMode].welcome },
+      ]);
+    }
+  }, [chatId, selectedMode, getChat, router]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -80,21 +100,37 @@ export default function ChatInterface() {
     }
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || isPending) return;
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUri = e.target?.result as string;
+        handleSendMessage(input, dataUri);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    const userMessage: Message = { role: "user", content: input };
+  const handleSendMessage = (text: string, media?: string) => {
+    if ((!text.trim() && !media) || isPending) return;
+
+    const currentChatId = chatId || createChat(text);
+    if (!chatId) {
+      router.push(`/chat/${currentChatId}`);
+    }
+
+    const userMessage: Message = { role: "user", content: text, media };
     setMessages((prev) => [...prev, userMessage]);
+    addMessage(currentChatId, userMessage);
     setInput("");
 
     startTransition(async () => {
-      const result = await invokeAI(selectedMode, input);
-      if (result.success) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: result.response },
-        ]);
+      const result = await invokeAI(selectedMode, text, media);
+      if (result.success && result.response) {
+        const assistantMessage: Message = { role: "assistant", ...result.response };
+        setMessages((prev) => [...prev, assistantMessage]);
+        addMessage(currentChatId, assistantMessage);
       } else {
         toast({
           variant: "destructive",
@@ -106,6 +142,11 @@ export default function ChatInterface() {
     });
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleSendMessage(input);
+  };
+  
   return (
     <Card className="w-full max-w-4xl h-[85vh] flex flex-col shadow-lg bg-transparent border-none">
       <CardHeader className="p-4">
@@ -151,7 +192,13 @@ export default function ChatInterface() {
                       : "bg-secondary"
                   }`}
                 >
+                  {message.media && message.media.startsWith('data:image') && (
+                    <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-xs" />
+                  )}
                   <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.audio && (
+                    <audio controls src={message.audio} className="w-full mt-2" />
+                  )}
                 </div>
                 {message.role === "user" && (
                   <Avatar className="h-8 w-8 border-2 border-muted">
@@ -184,6 +231,22 @@ export default function ChatInterface() {
 
       <CardFooter className="p-4 border-t-0">
         <form onSubmit={handleSubmit} className="w-full flex gap-2 max-w-3xl mx-auto">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*"
+          />
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => fileInputRef.current?.click()}
+            className="h-12 w-12 flex-shrink-0"
+          >
+            <Paperclip className="h-5 w-5"/>
+          </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -191,7 +254,15 @@ export default function ChatInterface() {
             disabled={isPending}
             className="flex-grow bg-secondary h-12 focus-visible:ring-primary"
           />
-          <Button type="submit" disabled={isPending || !input.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-12" size="icon">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="h-12 w-12 flex-shrink-0"
+          >
+            <Mic className="h-5 w-5"/>
+          </Button>
+          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-12" size="icon">
             <Send className="h-5 w-5"/>
           </Button>
         </form>

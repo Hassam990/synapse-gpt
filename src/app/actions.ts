@@ -1,6 +1,6 @@
 "use server";
 
-import { synapse, SynapseInput } from "@/ai/flows/synapse-flow";
+import { synapse, SynapseInput, SynapseOutput } from "@/ai/flows/synapse-flow";
 
 export type AiMode =
   | "conversation"
@@ -8,11 +8,19 @@ export type AiMode =
   | "information"
   | "gpt";
 
-export async function invokeAI(mode: AiMode, prompt: string) {
+export interface Message {
+    role: "user" | "assistant";
+    content: string;
+    media?: string; // data URI for images
+    audio?: string; // data URI for audio
+}
+
+
+export async function invokeAI(mode: AiMode, prompt: string, media?: string) {
   try {
-    const input: SynapseInput = { mode, prompt };
-    const result = await synapse(input);
-    return { success: true, response: result.response };
+    const input: SynapseInput = { mode, prompt, media };
+    const result: SynapseOutput = await synapse(input);
+    return { success: true, response: result };
   } catch (error) {
     console.error("AI invocation failed:", error);
     const errorMessage =

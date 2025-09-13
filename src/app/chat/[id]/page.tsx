@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/sidebar';
 import RecentChats from '@/components/recent-chats';
 
-export default function ChatPage() {
+export default function ChatWithIdPage({ params }: { params: { id: string } }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
@@ -51,7 +51,7 @@ export default function ChatPage() {
             </Link>
             <SidebarGroup className="mt-4 p-0">
               <SidebarGroupLabel className="px-2">Recent Chats</SidebarGroupLabel>
-              <RecentChats />
+               <RecentChats />
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
@@ -80,7 +80,7 @@ export default function ChatPage() {
                 <SidebarTrigger />
             </header>
             <main className="flex-grow flex items-center justify-center p-4">
-              <ChatInterface />
+              <ChatInterface chatId={params.id} />
             </main>
           </div>
         </SidebarInset>
