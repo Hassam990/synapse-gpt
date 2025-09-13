@@ -114,18 +114,18 @@ export default function Home() {
 
         <SidebarInset>
           <div className="flex flex-col h-full">
-            <header className="p-4 flex justify-end">
-                <SidebarTrigger className="md:hidden"/>
+            <header className="p-4 flex justify-end md:hidden">
+                <SidebarTrigger />
             </header>
             <main className="flex-grow flex flex-col items-center justify-center p-4">
               <div className="flex flex-col items-center text-center">
                 <div className="bg-secondary p-3 rounded-lg mb-4">
                   <BrainCircuit className="h-8 w-8 text-primary" />
                 </div>
-                <h1 className="text-5xl font-bold font-headline text-primary">
+                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
                   SYNAPSE
                 </h1>
-                <p className="text-xl text-foreground/80 mt-1">
+                <p className="text-lg md:text-xl text-foreground/80 mt-1">
                   Pakistan’s First GPT
                 </p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
@@ -134,7 +134,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 w-full max-w-4xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 md:mt-12 w-full max-w-4xl">
                 {suggestionCards.map((card, index) => (
                    <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full">
                       <card.icon className="h-6 w-6 text-primary mb-2" />

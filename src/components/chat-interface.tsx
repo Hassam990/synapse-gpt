@@ -150,14 +150,14 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
   };
   
   return (
-    <Card className="w-full max-w-4xl h-[85vh] flex flex-col shadow-lg bg-transparent border-none">
+    <Card className="w-full max-w-4xl h-full md:h-[85vh] flex flex-col shadow-lg bg-transparent border-none">
       <CardHeader className="p-4">
         <div className="flex items-center justify-center">
             <Select
               defaultValue="conversation"
               onValueChange={(value) => setSelectedMode(value as AiMode)}
             >
-              <SelectTrigger className="w-[280px] bg-secondary border-border/50">
+              <SelectTrigger className="w-full sm:w-[280px] bg-secondary border-border/50">
                 <SelectValue placeholder="Select a mode" />
               </SelectTrigger>
               <SelectContent>
@@ -176,7 +176,7 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-4 ${
+                className={`flex items-start gap-3 sm:gap-4 ${
                   message.role === "user" ? "justify-end" : ""
                 }`}
               >
@@ -188,7 +188,7 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
                   </Avatar>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-2xl text-sm ${
+                  className={`rounded-lg p-3 max-w-[80%] sm:max-w-2xl text-sm ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary"
@@ -245,7 +245,7 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
             variant="ghost" 
             size="icon" 
             onClick={() => fileInputRef.current?.click()}
-            className="h-12 w-12 flex-shrink-0"
+            className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0"
           >
             <Paperclip className="h-5 w-5"/>
           </Button>
@@ -254,17 +254,17 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             disabled={isPending}
-            className="flex-grow bg-secondary h-12 focus-visible:ring-primary"
+            className="flex-grow bg-secondary h-10 sm:h-12 focus-visible:ring-primary"
           />
           <Button 
             type="button" 
             variant="ghost" 
             size="icon" 
-            className="h-12 w-12 flex-shrink-0"
+            className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0"
           >
             <Mic className="h-5 w-5"/>
           </Button>
-          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-12" size="icon">
+          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 sm:h-12 sm:w-12" size="icon">
             <Send className="h-5 w-5"/>
           </Button>
         </form>
