@@ -93,27 +93,31 @@ const synapseFlow = ai.defineFlow(
     }
     promptParts.push({ text: finalPrompt });
 
-    const [textResult, audioResult] = await Promise.all([
-        ai.generate({
-            model: googleAI.model('gemini-2.5-flash'),
-            prompt: promptParts,
-        }),
-        ai.generate({
-            model: googleAI.model('gemini-2.5-flash-preview-tts'),
-            config: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
+    // 1. Generate the text response first.
+    const textResult = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash'),
+        prompt: promptParts,
+    });
+
+    const content = textResult.text;
+    if (!content) {
+      throw new Error("Failed to generate text response.");
+    }
+
+    // 2. Generate audio from the text response.
+    const audioResult = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: 'Algenib' },
                 },
             },
-            prompt: input.prompt,
-        })
-    ]);
+        },
+        prompt: content, // Use the generated content for TTS
+    });
 
-    const content = textResult.text!;
-    
     let audioDataUri: string | undefined = undefined;
     if (audioResult.media) {
         const audioBuffer = Buffer.from(
