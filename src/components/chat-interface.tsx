@@ -1,7 +1,7 @@
 "use client";
 
 import { AiMode, invokeAI } from "@/app/actions";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,9 +11,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, User } from "lucide-react";
+import { Bot, User, Send } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 interface Message {
@@ -95,80 +101,75 @@ export default function ChatInterface() {
           title: "Error",
           description: result.error,
         });
-        // Remove the user message if the API call failed
         setMessages((prev) => prev.slice(0, prev.length - 1));
       }
     });
   };
 
   return (
-    <Card className="w-full max-w-3xl h-[70vh] flex flex-col shadow-lg">
+    <Card className="w-full max-w-4xl h-[85vh] flex flex-col shadow-lg bg-transparent border-none">
       <CardHeader className="p-4">
-        <Tabs
-          defaultValue="conversation"
-          className="w-full"
-          onValueChange={(value) => setSelectedMode(value as AiMode)}
-        >
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
-            <TabsTrigger value="conversation">Conversation</TabsTrigger>
-            <TabsTrigger value="assistance">Assistance</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
-            <TabsTrigger value="gpt">GPT</TabsTrigger>
-          </TabsList>
-          <div className="pt-2 text-center">
-            <h2 className="text-lg font-headline font-semibold text-primary">
-              {modeDetails[selectedMode].title}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {modeDetails[selectedMode].description}
-            </p>
-          </div>
-        </Tabs>
+        <div className="flex items-center justify-center">
+            <Select
+              defaultValue="conversation"
+              onValueChange={(value) => setSelectedMode(value as AiMode)}
+            >
+              <SelectTrigger className="w-[280px] bg-secondary border-border/50">
+                <SelectValue placeholder="Select a mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="conversation">Intelligent Conversation</SelectItem>
+                <SelectItem value="assistance">Personalized Assistance</SelectItem>
+                <SelectItem value="information">Information Tool</SelectItem>
+                <SelectItem value="gpt">Full GPT Access</SelectItem>
+              </SelectContent>
+            </Select>
+        </div>
       </CardHeader>
 
       <CardContent className="flex-grow p-4 overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-4 pr-4">
+          <div className="space-y-6 pr-4 max-w-3xl mx-auto">
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-3 ${
+                className={`flex items-start gap-4 ${
                   message.role === "user" ? "justify-end" : ""
                 }`}
               >
                 {message.role === "assistant" && (
                   <Avatar className="h-8 w-8 border-2 border-primary">
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-secondary">
                       <Bot className="h-5 w-5 text-primary" />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-md text-sm ${
+                  className={`rounded-lg p-3 max-w-2xl text-sm ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-card-foreground/5"
+                      : "bg-secondary"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>
                 {message.role === "user" && (
                   <Avatar className="h-8 w-8 border-2 border-muted">
-                    <AvatarFallback>
-                      <User className="h-5 w-5 text-muted-foreground" />
+                    <AvatarFallback className="bg-secondary text-foreground">
+                      <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
                 )}
               </div>
             ))}
             {isPending && (
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-4">
                 <Avatar className="h-8 w-8 border-2 border-primary">
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-secondary">
                     <Bot className="h-5 w-5 text-primary animate-pulse" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="rounded-lg p-3 max-w-md text-sm bg-card-foreground/5">
+                <div className="rounded-lg p-3 max-w-2xl text-sm bg-secondary">
                   <div className="flex items-center space-x-1">
                     <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
                     <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.15s]"></span>
@@ -181,17 +182,17 @@ export default function ChatInterface() {
         </ScrollArea>
       </CardContent>
 
-      <CardFooter className="p-4 border-t">
-        <form onSubmit={handleSubmit} className="w-full flex gap-2">
+      <CardFooter className="p-4 border-t-0">
+        <form onSubmit={handleSubmit} className="w-full flex gap-2 max-w-3xl mx-auto">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             disabled={isPending}
-            className="flex-grow bg-background focus-visible:ring-accent"
+            className="flex-grow bg-secondary h-12 focus-visible:ring-primary"
           />
-          <Button type="submit" disabled={isPending || !input.trim()} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            Send
+          <Button type="submit" disabled={isPending || !input.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-12" size="icon">
+            <Send className="h-5 w-5"/>
           </Button>
         </form>
       </CardFooter>
