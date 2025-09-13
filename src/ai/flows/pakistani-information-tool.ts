@@ -45,7 +45,9 @@ const pakistaniInformationFlow = ai.defineFlow(
     outputSchema: GetPakistaniInformationOutputSchema,
   },
   async input => {
-    const {output} = await pakistaniInformationPrompt(input);
+    const {output} = await pakistaniInformationPrompt(input, {
+      model: 'googleai/gemini-2.5-flash',
+    });
     return output!;
   }
 );
