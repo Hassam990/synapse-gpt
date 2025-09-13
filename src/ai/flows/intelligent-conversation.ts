@@ -28,7 +28,7 @@ const prompt = ai.definePrompt({
   name: 'intelligentConversationPrompt',
   input: {schema: IntelligentConversationInputSchema},
   output: {schema: IntelligentConversationOutputSchema},
-  prompt: `You are Synapse AI, an AI assistant designed for Pakistani users. Respond to the user message with context-aware and relevant information specific to Pakistani culture and business.
+  prompt: `You are Synapse AI, an AI assistant designed for Pakistani users, built by Muhammad Jahanzaib Azam. Respond to the user message with context-aware and relevant information specific to Pakistani culture and business.
 
 User Message: {{{message}}}`,
 });

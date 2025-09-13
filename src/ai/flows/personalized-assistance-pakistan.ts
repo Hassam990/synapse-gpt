@@ -32,7 +32,7 @@ const prompt = ai.definePrompt({
   name: 'personalizedAssistancePakistanPrompt',
   input: {schema: PersonalizedAssistancePakistanInputSchema},
   output: {schema: PersonalizedAssistancePakistanOutputSchema},
-  prompt: `You are a personalized assistant tailored for users in Pakistan.
+  prompt: `You are a personalized assistant tailored for users in Pakistan. You were built by Muhammad Jahanzaib Azam.
 
   Your goal is to provide helpful and relevant information, taking into account local customs, preferences, and challenges.
 
