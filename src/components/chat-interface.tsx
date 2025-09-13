@@ -24,6 +24,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChatHistory } from "@/hooks/use-chat-history";
 
+const welcomeMessage = `Assalam-o-Alaikum! Hello there!
+
+I'm SYNAPSE, Pakistan's first GPT-powered AI assistant, a proud creation of Muhammad Jahanzaib Azam. It's a pleasure to connect with you.
+
+How can I assist you today, keeping our unique Pakistani context and culture in mind? Feel free to ask anything!`;
+
 const modeDetails: Record<
   AiMode,
   { title: string; description: string; welcome: string }
@@ -31,26 +37,22 @@ const modeDetails: Record<
   conversation: {
     title: "Intelligent Conversation",
     description: "Engage in real-time, context-aware conversations.",
-    welcome:
-      "Welcome to Synapse! I'm ready to chat. How can I help you today?",
+    welcome: welcomeMessage,
   },
   assistance: {
     title: "Personalized Assistance",
     description: "Get assistance tailored for Pakistani users.",
-    welcome:
-      "Hello! I'm here to provide personalized assistance. What do you need help with?",
+    welcome: welcomeMessage,
   },
   information: {
     title: "Information Tool",
     description: "Access knowledge on local business and culture.",
-    welcome:
-      "I have access to a wealth of information about Pakistan. What would you like to know?",
+    welcome: welcomeMessage,
   },
   gpt: {
     title: "Full GPT Access",
     description: "Direct access to a full-powered GPT model.",
-    welcome:
-      "You now have full access to a powerful GPT model. Ask me anything.",
+    welcome: welcomeMessage,
   },
 };
 
