@@ -23,7 +23,6 @@ export type SynapseInput = z.infer<typeof SynapseInputSchema>;
 
 const SynapseOutputSchema = z.object({
   content: z.any().describe('The AI-generated text response as a stream.'),
-  audio: z.string().optional().describe('The AI-generated audio response as a data URI.'),
 });
 export type SynapseOutput = z.infer<typeof SynapseOutputSchema>;
 
