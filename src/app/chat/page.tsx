@@ -1,8 +1,9 @@
+
+'use client';
 import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
   BrainCircuit,
-  MessageSquare,
   Plus,
   Settings
 } from 'lucide-react';
@@ -14,15 +15,22 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarProvider,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import RecentChats from '@/components/recent-chats';
+import { Suspense } from 'react';
+
+function ChatPageContent() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatInterface />
+    </Suspense>
+  );
+}
+
 
 export default function ChatPage() {
   return (
@@ -80,7 +88,7 @@ export default function ChatPage() {
                 <SidebarTrigger />
             </header>
             <main className="flex-grow flex items-center justify-center p-4">
-              <ChatInterface />
+              <ChatPageContent />
             </main>
           </div>
         </SidebarInset>
