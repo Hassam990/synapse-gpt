@@ -7,24 +7,21 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarGroup,
-  SidebarGroupLabel,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   BrainCircuit,
   Plus,
-  MessageSquare,
   Settings,
   Bot,
   GraduationCap,
   Briefcase,
   PenSquare,
   Lightbulb,
+  Send,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import RecentChats from '@/components/recent-chats';
 import { redirect } from 'next/navigation';
 
 const suggestionCards = [
@@ -87,10 +84,6 @@ export default function Home() {
                 New Chat
               </Button>
             </Link>
-            <SidebarGroup className="mt-4 p-0">
-              <SidebarGroupLabel className="px-2">Recent Chats</SidebarGroupLabel>
-              <RecentChats />
-            </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">
@@ -136,21 +129,26 @@ export default function Home() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 md:mt-12 w-full max-w-4xl">
                 {suggestionCards.map((card, index) => (
-                   <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full">
-                      <card.icon className="h-6 w-6 text-primary mb-2" />
-                      <h3 className="font-semibold text-foreground">{card.title}</h3>
-                      <p className="text-sm text-muted-foreground">{card.description}</p>
+                   <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
+                      <div className="flex items-center gap-3 mb-2">
+                        <card.icon className="h-6 w-6 text-primary" />
+                        <h3 className="font-semibold text-foreground">{card.title}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground flex-grow">{card.description}</p>
                   </Link>
                 ))}
               </div>
             </main>
             <footer className="p-4 w-full max-w-4xl mx-auto">
-              <form action={handlePromptSubmit} className="relative">
+               <form action={handlePromptSubmit} className="relative">
                 <Input
                   name="prompt"
                   placeholder="Write a business proposal for a tech startup in Karachi"
-                  className="w-full bg-secondary pr-10 h-12 rounded-lg"
+                  className="w-full bg-secondary pr-12 h-12 rounded-full"
                 />
+                <Button type="submit" size="icon" className="absolute right-1.5 top-1.5 h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Send className="h-4 w-4" />
+                </Button>
               </form>
             </footer>
           </div>

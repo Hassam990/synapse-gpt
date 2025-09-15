@@ -10,12 +10,11 @@
 import {ai} from '@/ai/genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
-import type {AiMode} from '@/app/actions';
 import wav from 'wav';
 
 const SynapseInputSchema = z.object({
-  mode: z.enum(['conversation', 'assistance', 'information', 'gpt']),
   prompt: z.string().describe('The user query.'),
+  systemPrompt: z.string().describe('The system prompt based on the selected mode.'),
   media: z.string().optional().describe(
     "Optional media file (e.g., image) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
   ),
@@ -23,31 +22,22 @@ const SynapseInputSchema = z.object({
 export type SynapseInput = z.infer<typeof SynapseInputSchema>;
 
 const SynapseOutputSchema = z.object({
-  content: z.string().describe('The AI-generated text response.'),
+  content: z.any().describe('The AI-generated text response as a stream.'),
   audio: z.string().optional().describe('The AI-generated audio response as a data URI.'),
 });
 export type SynapseOutput = z.infer<typeof SynapseOutputSchema>;
+
+const AudioOutputSchema = z.object({
+  audio: z.string().optional().describe('The AI-generated audio response as a data URI.'),
+});
 
 export async function synapse(input: SynapseInput): Promise<SynapseOutput> {
   return synapseFlow(input);
 }
 
-const prompts: Record<AiMode, string> = {
-  conversation: `You are Synapse AI, an AI assistant designed for Pakistani users, built by Muhammad Jahanzaib Azam. Respond to the user message with context-aware and relevant information specific to Pakistani culture and business.
-
-User Message: {{{prompt}}}`,
-  assistance: `You are a personalized assistant tailored for users in Pakistan. You were built by Muhammad Jahanzaib Azam.
-  Your goal is to provide helpful and relevant information, taking into account local customs, preferences, and challenges.
-
-  User Query: {{prompt}}
-
-  Please provide a response that is appropriate and useful for a Pakistani user.`,
-  information: `You are a knowledgeable AI assistant specializing in providing information about Pakistan. You were built by Muhammad Jahanzaib Azam.
-  Your goal is to answer questions related to Pakistani business, culture, and current events.
-
-  User Query: {{{prompt}}}`,
-  gpt: `{{prompt}}`,
-};
+export async function generateAudio(text: string) {
+  return generateAudioFlow(text);
+}
 
 
 async function toWav(
@@ -84,8 +74,8 @@ const synapseFlow = ai.defineFlow(
     outputSchema: SynapseOutputSchema,
   },
   async (input) => {
-    const systemPrompt = prompts[input.mode];
-    const finalPrompt = systemPrompt.replace(/\{\{\{?prompt\}\}\}?/g, input.prompt);
+    
+    const finalPrompt = input.systemPrompt.replace(/\{\{\{?prompt\}\}\}?/g, input.prompt);
     
     const promptParts = [];
     if (input.media) {
@@ -93,19 +83,32 @@ const synapseFlow = ai.defineFlow(
     }
     promptParts.push({ text: finalPrompt });
 
-    // 1. Generate the text response first.
-    const textResult = await ai.generate({
+    const {stream} = ai.generateStream({
         model: googleAI.model('gemini-2.5-flash'),
         prompt: promptParts,
     });
 
-    const content = textResult.text;
-    if (!content) {
-      throw new Error("Failed to generate text response.");
-    }
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of stream) {
+          controller.enqueue(chunk.text);
+        }
+        controller.close();
+      },
+    });
 
-    // 2. Generate audio from the text response.
-    const audioResult = await ai.generate({
+    return { content: readableStream as any };
+  }
+);
+
+const generateAudioFlow = ai.defineFlow(
+  {
+    name: 'generateAudioFlow',
+    inputSchema: z.string(),
+    outputSchema: AudioOutputSchema,
+  },
+  async (text) => {
+     const audioResult = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
         config: {
             responseModalities: ['AUDIO'],
@@ -115,7 +118,7 @@ const synapseFlow = ai.defineFlow(
                 },
             },
         },
-        prompt: content, // Use the generated content for TTS
+        prompt: text,
     });
 
     let audioDataUri: string | undefined = undefined;
@@ -127,7 +130,6 @@ const synapseFlow = ai.defineFlow(
         const wavBase64 = await toWav(audioBuffer);
         audioDataUri = 'data:audio/wav;base64,' + wavBase64;
     }
-
-    return { content, audio: audioDataUri };
+     return { audio: audioDataUri };
   }
 );

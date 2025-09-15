@@ -1,4 +1,3 @@
-
 'use client';
 import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
@@ -16,11 +15,8 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import RecentChats from '@/components/recent-chats';
 import { Suspense } from 'react';
 
 function ChatPageContent() {
@@ -57,10 +53,6 @@ export default function ChatPage() {
                 New Chat
               </Button>
             </Link>
-            <SidebarGroup className="mt-4 p-0">
-              <SidebarGroupLabel className="px-2">Recent Chats</SidebarGroupLabel>
-              <RecentChats />
-            </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">

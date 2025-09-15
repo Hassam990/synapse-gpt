@@ -1,6 +1,6 @@
 "use client";
 
-import { AiMode, invokeAI, Message } from "@/app/actions";
+import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, User, Send, Paperclip, Mic, StopCircle } from "lucide-react";
+import { Bot, User, Send, Paperclip, Mic, StopCircle, Volume2, Loader } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useChatHistory } from "@/hooks/use-chat-history";
+import { v4 as uuidv4 } from 'uuid';
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
@@ -56,7 +56,7 @@ const modeDetails: Record<
   },
 };
 
-export default function ChatInterface({ chatId }: { chatId?: string }) {
+export default function ChatInterface() {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -66,33 +66,21 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const { getChat, addMessage, createChat } = useChatHistory();
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
 
   useEffect(() => {
     const prompt = searchParams.get('prompt');
-    if (prompt && !chatId) {
-      setInput(prompt);
-      const newChatId = createChat(prompt);
-      router.replace(`/chat/${newChatId}?prompt=${encodeURIComponent(prompt)}`);
-    }
-  }, [searchParams, chatId, createChat, router]);
-  
-  useEffect(() => {
-    if (chatId) {
-      const chat = getChat(chatId);
-      if (chat) {
-        setMessages(chat.messages);
-      } else {
-        router.push('/chat');
-      }
+    if (prompt) {
+      handleSendMessage(prompt);
+      // Clear the prompt from the URL
+      router.replace('/chat', undefined);
     } else {
-      setMessages([
-        { role: "assistant", content: modeDetails[selectedMode].welcome },
-      ]);
+        setMessages([
+          { id: uuidv4(), role: "assistant", content: modeDetails[selectedMode].welcome },
+        ]);
     }
-  }, [chatId, selectedMode, getChat, router]);
-
+  }, [searchParams, router, selectedMode]);
+  
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
@@ -114,32 +102,68 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
     }
   };
 
+  const handleGenerateAudio = async (messageId: string, text: string) => {
+    setAudioLoading(messageId);
+    const result = await generateAudioAction(text);
+    if (result.success && result.response?.audio) {
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
+        )
+      );
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error generating audio",
+        description: result.error,
+      });
+    }
+    setAudioLoading(null);
+  };
+
   const handleSendMessage = (text: string, media?: string) => {
     if ((!text.trim() && !media) || isPending) return;
 
-    const currentChatId = chatId || createChat(text);
-    if (!chatId) {
-      router.push(`/chat/${currentChatId}`);
-    }
-
-    const userMessage: Message = { role: "user", content: text, media };
-    setMessages((prev) => [...prev, userMessage]);
-    addMessage(currentChatId, userMessage);
+    const userMessage: Message = { id: uuidv4(), role: "user", content: text, media };
+    const assistantMessageId = uuidv4();
+    
+    setMessages((prev) => [...prev, userMessage, { id: assistantMessageId, role: 'assistant', content: '' }]);
     setInput("");
 
     startTransition(async () => {
-      const result = await invokeAI(selectedMode, text, media);
-      if (result.success && result.response) {
-        const assistantMessage: Message = { role: "assistant", ...result.response };
-        setMessages((prev) => [...prev, assistantMessage]);
-        addMessage(currentChatId, assistantMessage);
-      } else {
-        toast({
+      try {
+        const result = await invokeAI(selectedMode, text, media);
+        if (result.success && result.response?.content) {
+          const reader = result.response.content.getReader();
+          const decoder = new TextDecoder();
+          let accumulatedContent = '';
+
+          const read = async () => {
+            const { done, value } = await reader.read();
+            if (done) {
+              return;
+            }
+            accumulatedContent += decoder.decode(value, { stream: true });
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg
+              )
+            );
+            await read();
+          };
+          await read();
+        } else {
+          throw new Error(result.error || "An unknown error occurred.");
+        }
+      } catch (error) {
+         toast({
           variant: "destructive",
           title: "Error",
-          description: result.error,
+          description: error instanceof Error ? error.message : String(error),
         });
-        setMessages((prev) => prev.slice(0, prev.length - 1));
+        setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId));
       }
     });
   };
@@ -173,9 +197,9 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
       <CardContent className="flex-grow p-4 overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="space-y-6 pr-4 max-w-3xl mx-auto">
-            {messages.map((message, index) => (
+            {messages.map((message) => (
               <div
-                key={index}
+                key={message.id}
                 className={`flex items-start gap-3 sm:gap-4 ${
                   message.role === "user" ? "justify-end" : ""
                 }`}
@@ -198,6 +222,23 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
                     <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-xs" />
                   )}
                   <p className="whitespace-pre-wrap">{message.content}</p>
+                   {message.role === 'assistant' && message.content && !message.audio && (
+                    <div className="mt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleGenerateAudio(message.id!, message.content)}
+                        disabled={audioLoading === message.id}
+                        className="h-6 w-6"
+                      >
+                        {audioLoading === message.id ? (
+                          <Loader className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Volume2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
                   {message.audio && (
                     <audio controls src={message.audio} className="w-full mt-2" />
                   )}
@@ -211,7 +252,7 @@ export default function ChatInterface({ chatId }: { chatId?: string }) {
                 )}
               </div>
             ))}
-            {isPending && (
+            {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
               <div className="flex items-start gap-4">
                 <Avatar className="h-8 w-8 border-2 border-primary">
                   <AvatarFallback className="bg-secondary">

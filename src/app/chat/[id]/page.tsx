@@ -2,7 +2,6 @@ import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
   BrainCircuit,
-  MessageSquare,
   Plus,
   Settings
 } from 'lucide-react';
@@ -14,19 +13,20 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarProvider,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import RecentChats from '@/components/recent-chats';
 
-export default function ChatWithIdPage({ params }: { params: { id: string } }) {
+export default function ChatWithIdPage() {
+  // Redirect to the main chat page as history is removed.
+  // This can be replaced with a redirect in next.config.js for a cleaner approach
+  // but this is a simple solution for now.
+  if (typeof window !== 'undefined') {
+    window.location.href = '/chat';
+  }
+
   return (
-    <SidebarProvider>
+     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
       <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
@@ -49,10 +49,6 @@ export default function ChatWithIdPage({ params }: { params: { id: string } }) {
                 New Chat
               </Button>
             </Link>
-            <SidebarGroup className="mt-4 p-0">
-              <SidebarGroupLabel className="px-2">Recent Chats</SidebarGroupLabel>
-               <RecentChats />
-            </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">
@@ -80,7 +76,7 @@ export default function ChatWithIdPage({ params }: { params: { id: string } }) {
                 <SidebarTrigger />
             </header>
             <main className="flex-grow flex items-center justify-center p-4">
-              <ChatInterface chatId={params.id} />
+              <ChatInterface />
             </main>
           </div>
         </SidebarInset>
