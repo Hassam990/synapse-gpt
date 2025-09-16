@@ -172,7 +172,7 @@ export default function ChatInterface() {
 
       <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-6 p-4 max-w-3xl mx-auto">
+          <div className="space-y-6 p-4 w-full max-w-4xl mx-auto">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -186,7 +186,7 @@ export default function ChatInterface() {
                     </div>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-[90%] text-sm ${
+                  className={`rounded-lg p-3 max-w-[90%] sm:max-w-[80%] md:max-w-[70%] text-sm ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary"
@@ -246,7 +246,7 @@ export default function ChatInterface() {
       </main>
 
       <footer className="p-4 border-t border-border/20">
-        <form onSubmit={handleSubmit} className="w-full flex items-center gap-2 max-w-3xl mx-auto">
+        <form onSubmit={handleSubmit} className="w-full flex items-center gap-2 max-w-4xl mx-auto">
           <input
             type="file"
             ref={fileInputRef}
