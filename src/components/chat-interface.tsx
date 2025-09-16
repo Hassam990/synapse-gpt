@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -146,7 +146,6 @@ export default function ChatInterface() {
         const result = await invokeAI(selectedMode, text, media);
         if (result.success && result.response?.content) {
           const reader = result.response.content.getReader();
-          const decoder = new TextDecoder();
           let accumulatedContent = '';
 
           const read = async () => {
@@ -154,7 +153,7 @@ export default function ChatInterface() {
             if (done) {
               return;
             }
-            accumulatedContent += decoder.decode(value, { stream: true });
+            accumulatedContent += value;
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantMessageId
@@ -329,3 +328,5 @@ export default function ChatInterface() {
     </Card>
   );
 }
+
+    
