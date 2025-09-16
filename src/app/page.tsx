@@ -65,7 +65,7 @@ export default function Home() {
       <div className="flex min-h-screen bg-background">
         <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
-            <div className="flex items-center gap-2 pl-2">
+            <Link href="/" className="flex items-center gap-2 pl-2">
               <div className="bg-foreground p-1.5 rounded-lg">
                 <BrainCircuit className="h-6 w-6 text-background" />
               </div>
@@ -75,7 +75,7 @@ export default function Home() {
                   Pakistan's First GPT
                 </p>
               </div>
-            </div>
+            </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
             <Link href="/chat">
@@ -144,7 +144,7 @@ export default function Home() {
                 <Input
                   name="prompt"
                   placeholder="Write a business proposal for a tech startup in Karachi"
-                  className="w-full bg-secondary pr-12 h-12 rounded-lg"
+                  className="w-full bg-secondary pr-12 h-12 rounded-full"
                 />
                 <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
                   <Send className="h-4 w-4" />

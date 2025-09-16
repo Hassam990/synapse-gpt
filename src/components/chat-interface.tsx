@@ -2,14 +2,7 @@
 "use client";
 
 import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -31,32 +24,6 @@ I'm SYNAPSE, Pakistan's first GPT-powered AI assistant, a proud creation of Muha
 
 How can I assist you today, keeping our unique Pakistani context and culture in mind? Feel free to ask anything!`;
 
-const modeDetails: Record<
-  AiMode,
-  { title: string; description: string; welcome: string }
-> = {
-  conversation: {
-    title: "Intelligent Conversation",
-    description: "Engage in real-time, context-aware conversations.",
-    welcome: welcomeMessage,
-  },
-  assistance: {
-    title: "Personalized Assistance",
-    description: "Get assistance tailored for Pakistani users.",
-    welcome: welcomeMessage,
-  },
-  information: {
-    title: "Information Tool",
-    description: "Access knowledge on local business and culture.",
-    welcome: welcomeMessage,
-  },
-  gpt: {
-    title: "Full GPT Access",
-    description: "Direct access to a full-powered GPT model.",
-    welcome: welcomeMessage,
-  },
-};
-
 export default function ChatInterface() {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -76,7 +43,7 @@ export default function ChatInterface() {
       router.replace('/chat');
     } else {
         setMessages([
-          { id: uuidv4(), role: "assistant", content: modeDetails[selectedMode].welcome },
+          { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
   }, []);
@@ -185,45 +152,41 @@ export default function ChatInterface() {
   };
   
   return (
-    <Card className="w-full max-w-4xl h-full md:h-[90vh] flex flex-col shadow-lg bg-card border border-border/20 rounded-xl">
-      <CardHeader className="p-4 border-b border-border/20">
-        <div className="flex items-center justify-center">
-            <Select
-              defaultValue="conversation"
-              onValueChange={(value) => setSelectedMode(value as AiMode)}
-            >
-              <SelectTrigger className="w-full sm:w-[280px] bg-secondary border-border/50">
-                <SelectValue placeholder="Select a mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="conversation">Intelligent Conversation</SelectItem>
-                <SelectItem value="assistance">Personalized Assistance</SelectItem>
-                <SelectItem value="information">Information Tool</SelectItem>
-                <SelectItem value="gpt">Full GPT Access</SelectItem>
-              </SelectContent>
-            </Select>
-        </div>
-      </CardHeader>
+    <div className="w-full h-full flex flex-col bg-background">
+      <header className="p-4 border-b border-border/20 flex justify-center">
+        <Select
+          defaultValue="conversation"
+          onValueChange={(value) => setSelectedMode(value as AiMode)}
+        >
+          <SelectTrigger className="w-full sm:w-[280px] bg-secondary border-border/50">
+            <SelectValue placeholder="Select a mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="conversation">Intelligent Conversation</SelectItem>
+            <SelectItem value="assistance">Personalized Assistance</SelectItem>
+            <SelectItem value="information">Information Tool</SelectItem>
+            <SelectItem value="gpt">Full GPT Access</SelectItem>
+          </SelectContent>
+        </Select>
+      </header>
 
-      <CardContent className="flex-grow p-2 sm:p-4 overflow-hidden">
+      <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-6 pr-4 max-w-3xl mx-auto">
+          <div className="space-y-6 p-4 max-w-3xl mx-auto">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-start gap-3 sm:gap-4 ${
+                className={`flex items-start gap-3 ${
                   message.role === "user" ? "justify-end" : ""
                 }`}
               >
                 {message.role === "assistant" && (
-                  <Avatar className="h-8 w-8 border-2 border-primary flex-shrink-0">
-                    <AvatarFallback className="bg-secondary">
-                      <Bot className="h-5 w-5 text-primary" />
-                    </AvatarFallback>
-                  </Avatar>
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                        <Bot className="h-5 w-5 text-primary-foreground" />
+                    </div>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-[90%] sm:max-w-2xl text-sm ${
+                  className={`rounded-lg p-3 max-w-[90%] text-sm ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary"
@@ -241,7 +204,7 @@ export default function ChatInterface() {
                           size="icon"
                           onClick={() => handleGenerateAudio(message.id!, message.content)}
                           disabled={audioLoading === message.id}
-                          className="h-7 w-7"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           aria-label="Generate audio"
                         >
                           {audioLoading === message.id ? (
@@ -258,21 +221,17 @@ export default function ChatInterface() {
                   )}
                 </div>
                 {message.role === "user" && (
-                  <Avatar className="h-8 w-8 border-2 border-muted flex-shrink-0">
-                    <AvatarFallback className="bg-secondary text-foreground">
-                      <User className="h-5 w-5" />
-                    </AvatarFallback>
-                  </Avatar>
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="h-5 w-5 text-foreground" />
+                    </div>
                 )}
               </div>
             ))}
              {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8 border-2 border-primary">
-                  <AvatarFallback className="bg-secondary">
-                    <Bot className="h-5 w-5 text-primary animate-pulse" />
-                  </AvatarFallback>
-                </Avatar>
+              <div className="flex items-start gap-3">
+                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
+                    <Bot className="h-5 w-5 text-primary-foreground" />
+                 </div>
                 <div className="rounded-lg p-3 max-w-2xl text-sm bg-secondary">
                   <div className="flex items-center space-x-1">
                     <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
@@ -284,9 +243,9 @@ export default function ChatInterface() {
             )}
           </div>
         </ScrollArea>
-      </CardContent>
+      </main>
 
-      <CardFooter className="p-2 sm:p-4 border-t border-border/20">
+      <footer className="p-4 border-t border-border/20">
         <form onSubmit={handleSubmit} className="w-full flex items-center gap-2 max-w-3xl mx-auto">
           <input
             type="file"
@@ -300,7 +259,7 @@ export default function ChatInterface() {
             variant="ghost" 
             size="icon" 
             onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0 text-muted-foreground hover:text-foreground"
             aria-label="Attach file"
           >
             <Paperclip className="h-5 w-5"/>
@@ -310,24 +269,22 @@ export default function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             disabled={isPending}
-            className="flex-grow bg-secondary h-10 focus-visible:ring-primary"
+            className="flex-grow bg-secondary h-12 rounded-full focus-visible:ring-primary pr-4"
           />
           <Button 
             type="button" 
             variant="ghost" 
             size="icon" 
-            className="h-10 w-10 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0 text-muted-foreground hover:text-foreground"
             aria-label="Use microphone"
           >
             <Mic className="h-5 w-5"/>
           </Button>
-          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10" size="icon" aria-label="Send message">
+          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 rounded-full" size="icon" aria-label="Send message">
             <Send className="h-5 w-5"/>
           </Button>
         </form>
-      </CardFooter>
-    </Card>
+      </footer>
+    </div>
   );
 }
-
-    

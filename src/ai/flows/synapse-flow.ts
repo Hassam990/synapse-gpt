@@ -74,13 +74,13 @@ const synapseFlow = ai.defineFlow(
   },
   async (input) => {
     
-    const finalPrompt = input.systemPrompt.replace(/\{\{\{?prompt\}\}\}?/g, input.prompt);
-    
     const promptParts = [];
+    promptParts.push({ text: input.systemPrompt });
+
     if (input.media) {
         promptParts.push({ media: { url: input.media } });
     }
-    promptParts.push({ text: finalPrompt });
+    promptParts.push({ text: `User prompt: ${input.prompt}` });
 
     const {stream} = ai.generateStream({
         model: googleAI.model('gemini-2.5-flash'),
