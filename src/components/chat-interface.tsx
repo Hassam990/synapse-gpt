@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, User, Send, Paperclip, Mic, StopCircle, Volume2, Loader } from "lucide-react";
+import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
@@ -72,14 +72,13 @@ export default function ChatInterface() {
     const prompt = searchParams.get('prompt');
     if (prompt) {
       handleSendMessage(prompt);
-      // Clear the prompt from the URL
-      router.replace('/chat', undefined);
+      router.replace('/chat');
     } else {
         setMessages([
           { id: uuidv4(), role: "assistant", content: modeDetails[selectedMode].welcome },
         ]);
     }
-  }, [searchParams, router, selectedMode]);
+  }, []);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -104,21 +103,30 @@ export default function ChatInterface() {
 
   const handleGenerateAudio = async (messageId: string, text: string) => {
     setAudioLoading(messageId);
-    const result = await generateAudioAction(text);
-    if (result.success && result.response?.audio) {
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
-        )
-      );
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Error generating audio",
-        description: result.error,
-      });
+    try {
+      const result = await generateAudioAction(text);
+      if (result.success && result.response?.audio) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
+          )
+        );
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error generating audio",
+          description: result.error,
+        });
+      }
+    } catch (error) {
+       toast({
+          variant: "destructive",
+          title: "Error generating audio",
+          description: error instanceof Error ? error.message : "An unknown error occurred.",
+        });
+    } finally {
+      setAudioLoading(null);
     }
-    setAudioLoading(null);
   };
 
   const handleSendMessage = (text: string, media?: string) => {
@@ -129,6 +137,9 @@ export default function ChatInterface() {
     
     setMessages((prev) => [...prev, userMessage, { id: assistantMessageId, role: 'assistant', content: '' }]);
     setInput("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
 
     startTransition(async () => {
       try {
@@ -151,9 +162,9 @@ export default function ChatInterface() {
                   : msg
               )
             );
-            await read();
+            read();
           };
-          await read();
+          read();
         } else {
           throw new Error(result.error || "An unknown error occurred.");
         }
@@ -174,8 +185,8 @@ export default function ChatInterface() {
   };
   
   return (
-    <Card className="w-full max-w-4xl h-full md:h-[85vh] flex flex-col shadow-lg bg-transparent border-none">
-      <CardHeader className="p-4">
+    <Card className="w-full max-w-4xl h-full md:h-[90vh] flex flex-col shadow-lg bg-card border border-border/20 rounded-xl">
+      <CardHeader className="p-4 border-b border-border/20">
         <div className="flex items-center justify-center">
             <Select
               defaultValue="conversation"
@@ -194,7 +205,7 @@ export default function ChatInterface() {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-grow p-4 overflow-hidden">
+      <CardContent className="flex-grow p-2 sm:p-4 overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="space-y-6 pr-4 max-w-3xl mx-auto">
             {messages.map((message) => (
@@ -205,46 +216,49 @@ export default function ChatInterface() {
                 }`}
               >
                 {message.role === "assistant" && (
-                  <Avatar className="h-8 w-8 border-2 border-primary">
+                  <Avatar className="h-8 w-8 border-2 border-primary flex-shrink-0">
                     <AvatarFallback className="bg-secondary">
                       <Bot className="h-5 w-5 text-primary" />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-[80%] sm:max-w-2xl text-sm ${
+                  className={`rounded-lg p-3 max-w-[90%] sm:max-w-2xl text-sm ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary"
                   }`}
                 >
                   {message.media && message.media.startsWith('data:image') && (
-                    <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-xs" />
+                    <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-full h-auto" />
                   )}
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                   {message.role === 'assistant' && message.content && !message.audio && (
-                    <div className="mt-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleGenerateAudio(message.id!, message.content)}
-                        disabled={audioLoading === message.id}
-                        className="h-6 w-6"
-                      >
-                        {audioLoading === message.id ? (
-                          <Loader className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Volume2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                   {message.role === 'assistant' && message.content && (
+                     <div className="mt-2 flex items-center gap-2">
+                      {!message.audio && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleGenerateAudio(message.id!, message.content)}
+                          disabled={audioLoading === message.id}
+                          className="h-7 w-7"
+                          aria-label="Generate audio"
+                        >
+                          {audioLoading === message.id ? (
+                            <Loader className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      {message.audio && (
+                        <audio controls src={message.audio} className="w-full max-w-xs h-10" />
+                      )}
                     </div>
-                  )}
-                  {message.audio && (
-                    <audio controls src={message.audio} className="w-full mt-2" />
                   )}
                 </div>
                 {message.role === "user" && (
-                  <Avatar className="h-8 w-8 border-2 border-muted">
+                  <Avatar className="h-8 w-8 border-2 border-muted flex-shrink-0">
                     <AvatarFallback className="bg-secondary text-foreground">
                       <User className="h-5 w-5" />
                     </AvatarFallback>
@@ -252,7 +266,7 @@ export default function ChatInterface() {
                 )}
               </div>
             ))}
-            {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
+             {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
               <div className="flex items-start gap-4">
                 <Avatar className="h-8 w-8 border-2 border-primary">
                   <AvatarFallback className="bg-secondary">
@@ -272,8 +286,8 @@ export default function ChatInterface() {
         </ScrollArea>
       </CardContent>
 
-      <CardFooter className="p-4 border-t-0">
-        <form onSubmit={handleSubmit} className="w-full flex gap-2 max-w-3xl mx-auto">
+      <CardFooter className="p-2 sm:p-4 border-t border-border/20">
+        <form onSubmit={handleSubmit} className="w-full flex items-center gap-2 max-w-3xl mx-auto">
           <input
             type="file"
             ref={fileInputRef}
@@ -286,7 +300,8 @@ export default function ChatInterface() {
             variant="ghost" 
             size="icon" 
             onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0"
+            aria-label="Attach file"
           >
             <Paperclip className="h-5 w-5"/>
           </Button>
@@ -295,17 +310,18 @@ export default function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             disabled={isPending}
-            className="flex-grow bg-secondary h-10 sm:h-12 focus-visible:ring-primary"
+            className="flex-grow bg-secondary h-10 focus-visible:ring-primary"
           />
           <Button 
             type="button" 
             variant="ghost" 
             size="icon" 
-            className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0"
+            aria-label="Use microphone"
           >
             <Mic className="h-5 w-5"/>
           </Button>
-          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 sm:h-12 sm:w-12" size="icon">
+          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10" size="icon" aria-label="Send message">
             <Send className="h-5 w-5"/>
           </Button>
         </form>

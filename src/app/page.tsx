@@ -127,7 +127,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 md:mt-12 w-full max-w-4xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 md:mt-12 w-full max-w-4xl">
                 {suggestionCards.map((card, index) => (
                    <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
                       <div className="flex items-center gap-3 mb-2">
@@ -139,14 +139,14 @@ export default function Home() {
                 ))}
               </div>
             </main>
-            <footer className="p-4 w-full max-w-4xl mx-auto">
+            <footer className="p-4 w-full max-w-3xl mx-auto">
                <form action={handlePromptSubmit} className="relative">
                 <Input
                   name="prompt"
                   placeholder="Write a business proposal for a tech startup in Karachi"
-                  className="w-full bg-secondary pr-12 h-12 rounded-full"
+                  className="w-full bg-secondary pr-12 h-12 rounded-lg"
                 />
-                <Button type="submit" size="icon" className="absolute right-1.5 top-1.5 h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+                <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
                   <Send className="h-4 w-4" />
                 </Button>
               </form>

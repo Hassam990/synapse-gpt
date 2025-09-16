@@ -21,12 +21,11 @@ import { Suspense } from 'react';
 
 function ChatPageContent() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
       <ChatInterface />
     </Suspense>
   );
 }
-
 
 export default function ChatPage() {
   return (
@@ -79,7 +78,7 @@ export default function ChatPage() {
              <header className="p-4 flex justify-end md:hidden">
                 <SidebarTrigger />
             </header>
-            <main className="flex-grow flex items-center justify-center p-4">
+            <main className="flex-grow flex items-center justify-center p-1 sm:p-4">
               <ChatPageContent />
             </main>
           </div>
