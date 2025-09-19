@@ -35,18 +35,23 @@ export default function ChatInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [audioLoading, setAudioLoading] = useState<string | null>(null);
+  const promptHandled = useRef(false);
+
 
   useEffect(() => {
     const prompt = searchParams.get('prompt');
-    if (prompt) {
+    if (prompt && !promptHandled.current) {
       handleSendMessage(prompt);
-      router.replace('/chat');
-    } else {
+      promptHandled.current = true;
+      // Use replaceState to remove the prompt from the URL without a full page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    } else if (messages.length === 0) {
         setMessages([
           { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
-  }, []);
+  }, [searchParams]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
