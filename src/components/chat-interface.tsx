@@ -17,6 +17,7 @@ import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
+import type { Language } from "@/app/prompts";
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
@@ -26,6 +27,7 @@ How can I assist you today, keeping our unique Pakistani context and culture in 
 
 export default function ChatInterface() {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>('roman-urdu');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -116,7 +118,7 @@ export default function ChatInterface() {
 
     startTransition(async () => {
       try {
-        const result = await invokeAI(selectedMode, text, media);
+        const result = await invokeAI(selectedMode, text, selectedLanguage, media);
         if (result.success && result.response?.content) {
           const reader = result.response.content.getReader();
           let accumulatedContent = '';
@@ -158,7 +160,7 @@ export default function ChatInterface() {
   
   return (
     <div className="w-full h-full flex flex-col bg-background">
-      <header className="p-4 border-b border-border/20 flex justify-center">
+      <header className="p-4 border-b border-border/20 flex flex-col sm:flex-row justify-center items-center gap-4">
         <Select
           defaultValue="conversation"
           onValueChange={(value) => setSelectedMode(value as AiMode)}
@@ -171,6 +173,18 @@ export default function ChatInterface() {
             <SelectItem value="assistance">Personalized Assistance</SelectItem>
             <SelectItem value="information">Information Tool</SelectItem>
             <SelectItem value="gpt">Full GPT Access</SelectItem>
+          </SelectContent>
+        </Select>
+         <Select
+          defaultValue="roman-urdu"
+          onValueChange={(value) => setSelectedLanguage(value as Language)}
+        >
+          <SelectTrigger className="w-full sm:w-[180px] bg-secondary border-border/50">
+            <SelectValue placeholder="Select language" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="roman-urdu">Roman Urdu</SelectItem>
+            <SelectItem value="english">English</SelectItem>
           </SelectContent>
         </Select>
       </header>

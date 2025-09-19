@@ -11,13 +11,15 @@ import {ai} from '@/ai/genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 import wav from 'wav';
+import type { Language } from '@/app/prompts';
 
 const SynapseInputSchema = z.object({
   prompt: z.string().describe('The user query.'),
   systemPrompt: z.string().describe('The system prompt based on the selected mode.'),
   media: z.string().optional().describe(
-    "Optional media file (e.g., image) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    "Optional media file (e.g., image) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
   ),
+  language: z.enum(['roman-urdu', 'english']).describe('The language for the AI response.'),
 });
 export type SynapseInput = z.infer<typeof SynapseInputSchema>;
 

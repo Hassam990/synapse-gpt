@@ -1,7 +1,7 @@
 "use server";
 
 import { synapse, SynapseInput, SynapseOutput, generateAudio } from "@/ai/flows/synapse-flow";
-import { prompts } from "./prompts";
+import { prompts, type Language } from "./prompts";
 export type AiMode =
   | "conversation"
   | "assistance"
@@ -17,10 +17,10 @@ export interface Message {
 }
 
 
-export async function invokeAI(mode: AiMode, prompt: string, media?: string) {
+export async function invokeAI(mode: AiMode, prompt: string, language: Language, media?: string) {
   try {
-    const systemPrompt = prompts[mode];
-    const input: SynapseInput = { prompt, systemPrompt, media };
+    const systemPrompt = prompts[mode](language);
+    const input: SynapseInput = { prompt, systemPrompt, media, language };
     const result: SynapseOutput = await synapse(input);
     return { success: true, response: result };
   } catch (error) {
