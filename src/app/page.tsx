@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   SidebarProvider,
@@ -22,7 +24,8 @@ import {
   Send,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 const suggestionCards = [
   {
@@ -52,13 +55,26 @@ const suggestionCards = [
 ];
 
 export default function Home() {
-  async function handlePromptSubmit(formData: FormData) {
-    'use server';
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handlePromptSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const prompt = formData.get('prompt') as string;
     if (prompt) {
-      redirect(`/chat?prompt=${encodeURIComponent(prompt)}`);
+      router.push(`/chat?prompt=${encodeURIComponent(prompt)}`);
     }
-  }
+  };
+  
+  const handleCopyIBAN = () => {
+    const iban = 'PK35MEZN0002140100861151';
+    navigator.clipboard.writeText(iban);
+    toast({
+      title: 'IBAN Copied!',
+      description: 'The bank account IBAN has been copied to your clipboard.',
+    });
+  };
 
   return (
     <SidebarProvider>
@@ -126,8 +142,30 @@ export default function Home() {
                   <span>Built with innovation. Designed for the future.</span>
                 </div>
               </div>
+              
+               <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 max-w-2xl w-full">
+                <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
+                <p className="text-muted-foreground mt-2">
+                  There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
+                </p>
+                <p className="font-urdu text-2xl font-bold text-primary mt-4">
+                  سمجھو آپ کا ہر روپیہ اہم ہے
+                </p>
+                
+                <div className="text-left mt-4 bg-background/50 rounded-md p-4 text-sm space-y-2">
+                  <p><span className="font-semibold text-foreground/90">Account Title:</span> <span className="text-muted-foreground">Al Khidmat Foundation Pakistan</span></p>
+                  <p><span className="font-semibold text-foreground/90">Bank Name:</span> <span className="text-muted-foreground">Meezan Bank</span></p>
+                  <p><span className="font-semibold text-foreground/90">IBAN:</span> <span className="text-muted-foreground">PK35MEZN0002140100861151</span></p>
+                  <p><span className="font-semibold text-foreground/90">Swift Code:</span> <span className="text-muted-foreground">MEZNPKKA</span></p>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 md:mt-12 w-full max-w-4xl">
+                <Button onClick={handleCopyIBAN} className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
+                  DONATE NOW (Copy IBAN)
+                </Button>
+              </div>
+
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full max-w-4xl">
                 {suggestionCards.map((card, index) => (
                    <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
                       <div className="flex items-center gap-3 mb-2">
@@ -140,7 +178,7 @@ export default function Home() {
               </div>
             </main>
             <footer className="p-4 w-full max-w-3xl mx-auto">
-               <form action={handlePromptSubmit} className="relative">
+               <form onSubmit={handlePromptSubmit} className="relative">
                 <Input
                   name="prompt"
                   placeholder="Write a business proposal for a tech startup in Karachi"
