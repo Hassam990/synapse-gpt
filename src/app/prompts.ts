@@ -1,7 +1,7 @@
 export type Language = 'roman-urdu' | 'english';
 
 const languageInstructions = {
-  'roman-urdu': `Always respond in Roman Urdu. Only switch to English if the user explicitly asks for it.`,
+  'roman-urdu': `Always respond in Roman Urdu, which is Urdu written using the English alphabet (e.g., "Aap kaise hain?"). Only switch to English if the user explicitly asks for it. Do not use the Urdu script (e.g., "آپ کیسے ہیں؟").`,
   'english': `Always respond in English.`
 };
 
