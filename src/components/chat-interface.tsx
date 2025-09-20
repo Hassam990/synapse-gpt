@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
 import type { Language } from "@/app/prompts";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ I'm SYNAPSE, Pakistan's first GPT-powered AI assistant, a proud creation of Muha
 
 How can I assist you today, keeping our unique Pakistani context and culture in mind? Feel free to ask anything!`;
 
-export default function ChatInterface() {
+export default function ChatInterface({ initialPrompt }: { initialPrompt: string | null }) {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('roman-urdu');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,15 +36,12 @@ export default function ChatInterface() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const promptHandled = useRef(false);
 
-
   useEffect(() => {
-    const prompt = searchParams.get('prompt');
-    if (prompt && !promptHandled.current) {
-      handleSendMessage(prompt);
+    if (initialPrompt && !promptHandled.current) {
+      handleSendMessage(initialPrompt);
       promptHandled.current = true;
       // Use replaceState to remove the prompt from the URL without a full page reload
       const newUrl = window.location.pathname;
@@ -54,7 +51,7 @@ export default function ChatInterface() {
           { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
-  }, [searchParams]);
+  }, [initialPrompt]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -111,7 +108,12 @@ export default function ChatInterface() {
     const userMessage: Message = { id: uuidv4(), role: "user", content: text, media };
     const assistantMessageId = uuidv4();
     
-    setMessages((prev) => [...prev, userMessage, { id: assistantMessageId, role: 'assistant', content: '' }]);
+    // If it's the very first message from a prompt, clear the welcome message.
+    const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
+      ? [userMessage]
+      : [...messages, userMessage];
+
+    setMessages([...newMessages, { id: assistantMessageId, role: 'assistant', content: '' }]);
     setInput("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

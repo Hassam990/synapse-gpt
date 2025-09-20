@@ -20,11 +20,15 @@ import {
 } from '@/components/ui/sidebar';
 import { Suspense } from 'react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 function ChatPageContent() {
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get('prompt');
+
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-      <ChatInterface />
+      <ChatInterface initialPrompt={initialPrompt} />
     </Suspense>
   );
 }
