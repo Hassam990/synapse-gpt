@@ -117,7 +117,7 @@ export default function Home() {
 
         <SidebarInset>
             <div className="flex flex-col h-screen">
-                <header className="p-4 flex justify-end md:hidden w-full">
+                <header className="p-4 flex justify-end md:hidden">
                     <SidebarTrigger />
                 </header>
                 <main className="flex-1 overflow-y-auto p-4 flex justify-center">
