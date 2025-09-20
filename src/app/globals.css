@@ -81,4 +81,22 @@
   body {
     @apply bg-background text-foreground;
   }
+  ::selection {
+    @apply bg-primary/80 text-primary-foreground;
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-in {
+  animation: message-in 0.5s ease-out forwards;
 }

@@ -18,6 +18,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
 import type { Language } from "@/app/prompts";
+import { cn } from "@/lib/utils";
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
@@ -195,9 +196,9 @@ export default function ChatInterface() {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-start gap-3 ${
+                className={cn("flex items-start gap-3 animate-message-in",
                   message.role === "user" ? "justify-end" : ""
-                }`}
+                )}
               >
                 {message.role === "assistant" && (
                     <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
@@ -247,7 +248,7 @@ export default function ChatInterface() {
               </div>
             ))}
              {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 animate-message-in">
                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
                     <Bot className="h-5 w-5 text-primary-foreground" />
                  </div>
