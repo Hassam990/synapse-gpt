@@ -123,7 +123,7 @@ export default function Home() {
         </Sidebar>
 
         <SidebarInset>
-          <div className="flex flex-col h-full items-center justify-center">
+          <div className="flex flex-col flex-grow items-center justify-center">
             <header className="p-4 flex justify-end md:hidden w-full">
                 <SidebarTrigger />
             </header>
