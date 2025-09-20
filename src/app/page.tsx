@@ -131,7 +131,7 @@ export default function Home() {
                         </div>
                     </div>
                     
-                    <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 w-full mx-auto">
+                    <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 w-full mx-auto max-w-4xl">
                         <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
                         <p className="text-muted-foreground mt-2">
                         There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
@@ -152,7 +152,7 @@ export default function Home() {
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full mx-auto max-w-4xl">
                         {suggestionCards.map((card, index) => (
                         <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
                             <div className="flex items-center gap-3 mb-2">
@@ -165,7 +165,7 @@ export default function Home() {
                     </div>
                 </main>
                 <footer className="p-4 w-full">
-                    <form onSubmit={handlePromptSubmit} className="relative w-full mx-auto">
+                    <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl mx-auto">
                         <Input
                         name="prompt"
                         placeholder="Write a business proposal for a tech startup in Karachi"
