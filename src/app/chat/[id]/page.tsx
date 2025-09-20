@@ -66,10 +66,10 @@ export default function ChatWithIdPage() {
 
         <SidebarInset>
           <div className="flex flex-col h-screen">
-             <header className="p-4 flex justify-end md:hidden">
+             <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                 <SidebarTrigger />
             </header>
-            <main className="flex-grow flex items-center justify-center p-4">
+            <main className="flex-grow flex flex-col p-4 overflow-hidden">
               <ChatInterface />
             </main>
           </div>

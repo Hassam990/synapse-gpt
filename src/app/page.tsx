@@ -116,7 +116,7 @@ export default function Home() {
 
         <SidebarInset>
             <div className="flex flex-col h-screen">
-                <header className="p-4 flex justify-end md:hidden">
+                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                     <SidebarTrigger />
                 </header>
                 <main className="flex-1 overflow-y-auto p-4">
@@ -166,8 +166,8 @@ export default function Home() {
                         </div>
                     </div>
                 </main>
-                <footer className="p-4 w-full flex justify-center border-t border-border/20">
-                    <form onSubmit={handlePromptSubmit} className="relative w-full">
+                <footer className="p-4 w-full flex justify-center border-t border-border/20 flex-shrink-0">
+                    <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl mx-auto">
                         <Input
                         name="prompt"
                         placeholder="Write a business proposal for a tech startup in Karachi"
