@@ -84,7 +84,7 @@ export default function Home() {
         <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
             <Link href="/" className="flex items-center gap-2 px-2">
-              <Image src="https://raw.githubusercontent.com/Hassam990/synapse/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
+              <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -122,7 +122,7 @@ export default function Home() {
             </header>
             <main className="flex-grow flex flex-col items-center justify-center p-4">
               <div className="flex flex-col items-center text-center">
-                 <Image src="https://raw.githubusercontent.com/Hassam990/synapse/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
+                 <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
                 <p className="text-lg md:text-xl text-foreground/80 mt-1">
                   Pakistan’s First GPT
                 </p>
