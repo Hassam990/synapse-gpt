@@ -35,7 +35,7 @@ export default function ChatPage() {
       <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
           <Link href="/" className="flex items-center gap-2 px-2">
-               <Image src="/images/synapseGPT_logo.png" alt="SynapseGPT Logo" width={160} height={40} />
+               <Image src="https://raw.githubusercontent.com/Hassam990/synapse/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
