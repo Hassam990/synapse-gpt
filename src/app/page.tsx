@@ -27,6 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 const suggestionCards = [
   {
@@ -82,16 +83,8 @@ export default function Home() {
       <div className="flex min-h-screen bg-background">
         <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
-            <Link href="/" className="flex items-center gap-2 pl-2">
-              <div className="bg-foreground p-1.5 rounded-lg">
-                <BrainCircuit className="h-6 w-6 text-background" />
-              </div>
-              <div className="flex flex-col">
-                <h2 className="font-headline text-lg font-bold text-primary">SYNAPSE</h2>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Pakistan's First GPT
-                </p>
-              </div>
+            <Link href="/" className="flex items-center gap-2 px-2">
+              <Image src="/images/synapseGPT_logo.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -122,19 +115,14 @@ export default function Home() {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
-          <div className="flex flex-col flex-grow items-center justify-center">
+        <SidebarInset className="flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center flex-grow w-full">
             <header className="p-4 flex justify-end md:hidden w-full">
                 <SidebarTrigger />
             </header>
-            <main className="flex-grow flex flex-col items-center justify-center p-4 w-full">
+            <main className="flex-grow flex flex-col items-center justify-center p-4">
               <div className="flex flex-col items-center text-center">
-                <div className="bg-secondary p-3 rounded-lg mb-4">
-                  <BrainCircuit className="h-8 w-8 text-primary" />
-                </div>
-                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                  SYNAPSE
-                </h1>
+                 <Image src="/images/synapseGPT_logo.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
                 <p className="text-lg md:text-xl text-foreground/80 mt-1">
                   Pakistan’s First GPT
                 </p>

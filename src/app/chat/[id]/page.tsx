@@ -16,6 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import Image from 'next/image';
 
 export default function ChatWithIdPage() {
   // Redirect to the main chat page as history is removed.
@@ -30,16 +31,8 @@ export default function ChatWithIdPage() {
       <div className="flex min-h-screen bg-background">
       <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2 pl-2">
-              <div className="bg-foreground p-1.5 rounded-lg">
-                <BrainCircuit className="h-6 w-6 text-background" />
-              </div>
-              <div className="flex flex-col">
-                <h2 className="font-headline text-lg font-bold text-primary">SYNAPSE</h2>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Pakistan's First GPT
-                </p>
-              </div>
+          <Link href="/" className="flex items-center gap-2 px-2">
+              <Image src="/images/synapseGPT_logo.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
