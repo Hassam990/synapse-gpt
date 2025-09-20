@@ -100,3 +100,8 @@
 .animate-message-in {
   animation: message-in 0.5s ease-out forwards;
 }
+
+/* Custom progress bar color */
+.progress-bar-primary > div {
+  background-color: hsl(var(--primary));
+}
