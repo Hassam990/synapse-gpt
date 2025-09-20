@@ -120,19 +120,19 @@ export default function Home() {
                     <SidebarTrigger />
                 </header>
                 <main className="flex-1 overflow-y-auto p-4">
-                    <div className="w-full">
-                        <div className="flex flex-col items-center text-center">
-                            <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
-                            <p className="text-lg md:text-xl text-foreground/80 mt-1">
-                            Pakistan’s First GPT
-                            </p>
-                            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                            <Lightbulb className="h-4 w-4 text-primary" />
-                            <span>Built with innovation. Designed for the future.</span>
-                            </div>
+                    <div className="flex flex-col items-center text-center mb-8">
+                        <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
+                        <p className="text-lg md:text-xl text-foreground/80 mt-1">
+                        Pakistan’s First GPT
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                        <Lightbulb className="h-4 w-4 text-primary" />
+                        <span>Built with innovation. Designed for the future.</span>
                         </div>
-                        
-                        <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 w-full">
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+                        <div className="bg-secondary/50 border border-border/30 rounded-lg p-6 text-center flex flex-col">
                             <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
                             <p className="text-muted-foreground mt-2">
                             There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
@@ -153,7 +153,7 @@ export default function Home() {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {suggestionCards.map((card, index) => (
                             <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
                                 <div className="flex items-center gap-3 mb-2">
@@ -166,7 +166,7 @@ export default function Home() {
                         </div>
                     </div>
                 </main>
-                <footer className="p-4 w-full flex justify-center">
+                <footer className="p-4 w-full flex justify-center border-t border-border/20">
                     <form onSubmit={handlePromptSubmit} className="relative w-full">
                         <Input
                         name="prompt"
