@@ -126,69 +126,71 @@ export default function Home() {
             <header className="p-4 flex justify-end md:hidden">
                 <SidebarTrigger />
             </header>
-            <main className="flex-grow flex flex-col items-center justify-center p-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="bg-secondary p-3 rounded-lg mb-4">
-                  <BrainCircuit className="h-8 w-8 text-primary" />
+            <div className="flex flex-col items-center justify-center flex-grow">
+              <main className="flex-grow flex flex-col items-center justify-center p-4">
+                <div className="flex flex-col items-center text-center">
+                  <div className="bg-secondary p-3 rounded-lg mb-4">
+                    <BrainCircuit className="h-8 w-8 text-primary" />
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                    SYNAPSE
+                  </h1>
+                  <p className="text-lg md:text-xl text-foreground/80 mt-1">
+                    Pakistan’s First GPT
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    <span>Built with innovation. Designed for the future.</span>
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                  SYNAPSE
-                </h1>
-                <p className="text-lg md:text-xl text-foreground/80 mt-1">
-                  Pakistan’s First GPT
-                </p>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Lightbulb className="h-4 w-4 text-primary" />
-                  <span>Built with innovation. Designed for the future.</span>
-                </div>
-              </div>
-              
-               <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 max-w-2xl w-full">
-                <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
-                <p className="text-muted-foreground mt-2">
-                  There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
-                </p>
-                <p className="font-urdu text-2xl font-bold text-primary mt-4">
-                  سمجھو آپ کا ہر روپیہ اہم ہے
-                </p>
                 
-                <div className="text-left mt-4 bg-background/50 rounded-md p-4 text-sm space-y-2">
-                  <p><span className="font-semibold text-foreground/90">Account Title:</span> <span className="text-muted-foreground">Al Khidmat Foundation Pakistan</span></p>
-                  <p><span className="font-semibold text-foreground/90">Bank Name:</span> <span className="text-muted-foreground">Meezan Bank</span></p>
-                  <p><span className="font-semibold text-foreground/90">IBAN:</span> <span className="text-muted-foreground">PK35MEZN0002140100861151</span></p>
-                  <p><span className="font-semibold text-foreground/90">Swift Code:</span> <span className="text-muted-foreground">MEZNPKKA</span></p>
+                <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 max-w-2xl w-full">
+                  <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
+                  <p className="text-muted-foreground mt-2">
+                    There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
+                  </p>
+                  <p className="font-urdu text-2xl font-bold text-primary mt-4">
+                    سمجھو آپ کا ہر روپیہ اہم ہے
+                  </p>
+                  
+                  <div className="text-left mt-4 bg-background/50 rounded-md p-4 text-sm space-y-2">
+                    <p><span className="font-semibold text-foreground/90">Account Title:</span> <span className="text-muted-foreground">Al Khidmat Foundation Pakistan</span></p>
+                    <p><span className="font-semibold text-foreground/90">Bank Name:</span> <span className="text-muted-foreground">Meezan Bank</span></p>
+                    <p><span className="font-semibold text-foreground/90">IBAN:</span> <span className="text-muted-foreground">PK35MEZN0002140100861151</span></p>
+                    <p><span className="font-semibold text-foreground/90">Swift Code:</span> <span className="text-muted-foreground">MEZNPKKA</span></p>
+                  </div>
+
+                  <Button onClick={handleCopyIBAN} className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
+                    DONATE NOW (Copy IBAN)
+                  </Button>
                 </div>
 
-                <Button onClick={handleCopyIBAN} className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
-                  DONATE NOW (Copy IBAN)
-                </Button>
-              </div>
 
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full max-w-4xl">
-                {suggestionCards.map((card, index) => (
-                   <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
-                      <div className="flex items-center gap-3 mb-2">
-                        <card.icon className="h-6 w-6 text-primary" />
-                        <h3 className="font-semibold text-foreground">{card.title}</h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground flex-grow">{card.description}</p>
-                  </Link>
-                ))}
-              </div>
-            </main>
-            <footer className="p-4 w-full max-w-3xl mx-auto">
-               <form onSubmit={handlePromptSubmit} className="relative">
-                <Input
-                  name="prompt"
-                  placeholder="Write a business proposal for a tech startup in Karachi"
-                  className="w-full bg-secondary pr-12 h-12 rounded-full"
-                />
-                <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </footer>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full max-w-4xl">
+                  {suggestionCards.map((card, index) => (
+                    <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer text-left h-full flex flex-col">
+                        <div className="flex items-center gap-3 mb-2">
+                          <card.icon className="h-6 w-6 text-primary" />
+                          <h3 className="font-semibold text-foreground">{card.title}</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground flex-grow">{card.description}</p>
+                    </Link>
+                  ))}
+                </div>
+              </main>
+              <footer className="p-4 w-full max-w-3xl mx-auto">
+                <form onSubmit={handlePromptSubmit} className="relative">
+                  <Input
+                    name="prompt"
+                    placeholder="Write a business proposal for a tech startup in Karachi"
+                    className="w-full bg-secondary pr-12 h-12 rounded-full"
+                  />
+                  <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </footer>
+            </div>
           </div>
         </SidebarInset>
       </div>
