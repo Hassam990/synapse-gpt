@@ -14,15 +14,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  BrainCircuit,
-  Plus,
-  Settings,
   Bot,
-  GraduationCap,
   Briefcase,
-  PenSquare,
+  GraduationCap,
   Lightbulb,
+  PenSquare,
+  Plus,
   Send,
+  Settings,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -133,7 +132,7 @@ export default function Home() {
                             </div>
                         </div>
                         
-                        <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 max-w-2xl w-full mx-auto">
+                        <div className="mt-8 text-center bg-secondary/50 border border-border/30 rounded-lg p-6 w-full mx-auto">
                             <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
                             <p className="text-muted-foreground mt-2">
                             There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
