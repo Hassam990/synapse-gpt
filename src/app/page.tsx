@@ -119,7 +119,7 @@ export default function Home() {
                 <header className="p-4 flex justify-end md:hidden">
                     <SidebarTrigger />
                 </header>
-                <main className="flex-1 overflow-y-auto p-4 flex flex-col">
+                <main className="flex-1 overflow-y-auto p-4">
                     <div className="w-full">
                         <div className="flex flex-col items-center text-center">
                             <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
