@@ -119,8 +119,8 @@ export default function Home() {
                 <header className="p-4 flex justify-end md:hidden">
                     <SidebarTrigger />
                 </header>
-                <main className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
-                    <div className="w-full max-w-4xl flex flex-col items-center">
+                <main className="flex-1 overflow-y-auto p-4 flex flex-col">
+                    <div className="w-full">
                         <div className="flex flex-col items-center text-center">
                             <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
                             <p className="text-lg md:text-xl text-foreground/80 mt-1">
@@ -167,7 +167,7 @@ export default function Home() {
                     </div>
                 </main>
                 <footer className="p-4 w-full flex justify-center">
-                    <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl">
+                    <form onSubmit={handlePromptSubmit} className="relative w-full">
                         <Input
                         name="prompt"
                         placeholder="Write a business proposal for a tech startup in Karachi"
