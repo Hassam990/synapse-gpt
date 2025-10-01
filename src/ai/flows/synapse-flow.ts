@@ -12,6 +12,7 @@ import {googleAI} from '@genkit-ai/google-genai';
 import {z} from 'zod';
 import wav from 'wav';
 import type { Language } from '@/app/prompts';
+import { Readable } from 'stream';
 
 const SynapseInputSchema = z.object({
   prompt: z.string().describe('The user query.'),
