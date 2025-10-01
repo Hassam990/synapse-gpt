@@ -1,57 +1,47 @@
-
 'use client';
-import ChatInterface from '@/components/chat-interface';
+
 import Link from 'next/link';
 import {
-  BrainCircuit,
-  Plus,
-  Settings,
-  Bot
-} from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import {
+  SidebarProvider,
   Sidebar,
+  SidebarHeader,
+  SidebarTrigger,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton
+  SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Suspense } from 'react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Bot,
+  Plus,
+  Settings,
+  MessageSquare,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import ChatBot from '@/components/chatbot';
 
-function ChatPageContent() {
-  const searchParams = useSearchParams();
-  const initialPrompt = searchParams.get('prompt');
+export default function ChatbotPage() {
+  const router = useRouter();
 
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-      <ChatInterface initialPrompt={initialPrompt} />
-    </Suspense>
-  );
-}
-
-export default function ChatPage() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
-      <Sidebar collapsible="icon" className="border-r border-border/20">
+        <Sidebar collapsible="icon" className="border-r border-border/20">
           <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2 px-2">
-               <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
+            <Link href="/" className="flex items-center gap-2 px-2">
+              <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
-             <SidebarMenu>
+            <SidebarMenu>
                  <SidebarMenuItem>
                     <Link href="/chat" className="w-full">
-                        <SidebarMenuButton className="w-full justify-start" isActive={true}>
+                        <SidebarMenuButton className="w-full justify-start">
                         <Plus className="mr-2 h-4 w-4" />
                         New Chat
                         </SidebarMenuButton>
@@ -59,7 +49,7 @@ export default function ChatPage() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <Link href="/chatbot" className="w-full">
-                        <SidebarMenuButton className="w-full justify-start">
+                        <SidebarMenuButton className="w-full justify-start" isActive={true}>
                         <Bot className="mr-2 h-4 w-4" />
                         AI Chatbot
                         </SidebarMenuButton>
@@ -88,14 +78,18 @@ export default function ChatPage() {
         </Sidebar>
 
         <SidebarInset>
-          <div className="flex flex-col h-screen">
-             <header className="p-4 flex justify-end md:hidden flex-shrink-0">
-                <SidebarTrigger />
-            </header>
-            <main className="flex-grow flex flex-col p-1 sm:p-4 overflow-hidden">
-              <ChatPageContent />
-            </main>
-          </div>
+            <div className="flex flex-col h-screen">
+                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
+                    <SidebarTrigger />
+                </header>
+                <main className="flex-1 overflow-y-auto p-4">
+                    <div className="flex flex-col items-center text-center mb-8">
+                        <h1 className="text-2xl font-bold">AI Chatbot</h1>
+                        <p className="text-muted-foreground">A simple chatbot using the existing AI flow.</p>
+                    </div>
+                    <ChatBot />
+                </main>
+            </div>
         </SidebarInset>
       </div>
     </SidebarProvider>

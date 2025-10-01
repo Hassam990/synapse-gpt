@@ -10,6 +10,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -87,12 +90,24 @@ export default function Home() {
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
-            <Link href="/chat">
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
-              </Button>
-            </Link>
+             <SidebarMenu>
+                 <SidebarMenuItem>
+                    <Link href="/chat" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Chat
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Link href="/chatbot" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <Bot className="mr-2 h-4 w-4" />
+                        AI Chatbot
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">

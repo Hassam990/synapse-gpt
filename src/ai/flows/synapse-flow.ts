@@ -8,8 +8,8 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {googleAI} from '@genkit-ai/googleai';
-import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/google-genai';
+import {z} from 'zod';
 import wav from 'wav';
 import type { Language } from '@/app/prompts';
 
@@ -85,7 +85,7 @@ const synapseFlow = ai.defineFlow(
     promptParts.push({ text: `User prompt: ${input.prompt}` });
 
     const {stream} = ai.generateStream({
-        model: googleAI.model('gemini-1.5-flash-latest'),
+        model: googleAI.model('gemini-1.5-flash'),
         prompt: promptParts,
     });
 
