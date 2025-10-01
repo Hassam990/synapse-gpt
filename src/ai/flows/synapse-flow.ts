@@ -85,7 +85,7 @@ const synapseFlow = ai.defineFlow(
     promptParts.push({ text: `User prompt: ${input.prompt}` });
 
     const {stream} = ai.generateStream({
-        model: googleAI.model('gemini-1.5-flash'),
+        model: googleAI.model('gemini-1.5-flash-latest'),
         prompt: promptParts,
     });
 
