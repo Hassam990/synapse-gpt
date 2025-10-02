@@ -112,7 +112,6 @@ export async function generateAudio(text: string) {
     // However, the SDK might wrap it in a way that requires extracting.
     // Based on SDK docs, we expect audio_content in the response.
     // This part might need adjustment based on the exact response structure.
-    // For now, assuming result.response.audio_content is the base64 audio.
     const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
     
     if (!audioBase64) {
