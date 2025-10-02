@@ -80,13 +80,17 @@ const synapseFlow = ai.defineFlow(
     const promptParts = [];
     promptParts.push({ text: input.systemPrompt });
 
+    let modelToUse;
     if (input.media) {
         promptParts.push({ media: { url: input.media } });
+        modelToUse = googleAI.model('gemini-pro-vision');
+    } else {
+        modelToUse = googleAI.model('gemini-pro');
     }
     promptParts.push({ text: `User prompt: ${input.prompt}` });
 
     const {stream} = ai.generateStream({
-        model: googleAI.model('gemini-pro-vision'),
+        model: modelToUse,
         prompt: promptParts,
     });
 
@@ -111,7 +115,7 @@ const generateAudioFlow = ai.defineFlow(
   },
   async (text) => {
      const audioResult = await ai.generate({
-        model: googleAI.model('text-to-speech-2'),
+        model: googleAI.model('gemini-1.5-flash-preview-tts'),
         config: {
             responseModalities: ['AUDIO'],
             speechConfig: {
