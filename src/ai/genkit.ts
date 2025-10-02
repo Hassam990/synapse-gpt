@@ -1,16 +1,14 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
-import {genkitEval} from 'genkitx-eval';
-import {dotprompt} from 'genkitx-dotprompt';
+
 
 export const ai = genkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
     }),
-    genkitEval(),
-    dotprompt(),
+    
   ],
   logSinks: [
     // In dev, just log to the console.
