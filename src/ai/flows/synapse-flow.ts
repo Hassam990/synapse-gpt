@@ -14,6 +14,14 @@ import wav from 'wav';
 import type { Language } from '@/app/prompts';
 import { Readable } from 'stream';
 
+// Polyfill for fetch in Node.js environments
+if (typeof fetch !== 'function') {
+  import('node-fetch').then(({ default: nodeFetch }) => {
+    (global as any).fetch = nodeFetch;
+  });
+}
+
+
 const SynapseInputSchema = z.object({
   prompt: z.string().describe('The user query.'),
   systemPrompt: z.string().describe('The system prompt based on the selected mode.'),
