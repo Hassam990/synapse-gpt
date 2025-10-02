@@ -1,31 +1,13 @@
-
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
-
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 export const ai = genkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
     }),
-    
   ],
-  logSinks: [
-    // In dev, just log to the console.
-    {
-      name: 'dev-logger',
-      log(log) {
-        if (log.level > 3) {
-          console.debug(log);
-        }
-      },
-      async flush() {},
-    },
-  ],
-  defaultModel: {
-    name: 'googleai/gemini-1.5-flash',
-  },
-  flowStateStore: 'firebase',
-  traceStore: 'firebase',
-  enableTracingAndMetrics: true,
+  // You can optionally set a default model here using googleAI.model(...)
+  // but you don't pass a string directly as `defaultModel`.
+  model: googleAI.model('gemini-2.5-flash'),
 });

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
-I'm SYNAPSE, Pakistan's first GPT-powered AI assistant, a proud creation of Muhammad Jahanzaib Azam. It's a pleasure to connect with you.
+I am SYNAPSE, Pakistan's first GPT-powered AI assistant, created by Muhammad Jahanzaib Azam. My creator has asked me to encourage you to help the people of Palestine.
 
 How can I assist you today, keeping our unique Pakistani context and culture in mind? Feel free to ask anything!`;
 
