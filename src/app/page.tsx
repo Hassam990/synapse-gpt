@@ -99,14 +99,6 @@ export default function Home() {
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <Link href="/chatbot" className="w-full">
-                        <SidebarMenuButton className="w-full justify-start">
-                        <Bot className="mr-2 h-4 w-4" />
-                        AI Chatbot
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
