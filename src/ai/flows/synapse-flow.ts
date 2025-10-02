@@ -1,149 +1,132 @@
 'use server';
 /**
- * @fileOverview This file defines the core Genkit flow for the Synapse Pakistan application.
+ * @fileOverview This file defines the core AI interaction flows for the Synapse Pakistan application.
  *
- * - synapse - A unified function to handle all AI interactions based on different modes.
- * - SynapseInput - The input type for the synapse function.
- * - SynapseOutput - The return type for the synapse function.
+ * - synapse - A unified function to handle all AI interactions.
+ * - generateAudio - A function for text-to-speech generation.
  */
 
-import {ai} from '@/ai/genkit';
-import {googleAI} from '@genkit-ai/google-genai';
-import {z} from 'zod';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import wav from 'wav';
-import type { Language } from '@/app/prompts';
 import { Readable } from 'stream';
 
-// Polyfill for fetch in Node.js environments
-if (typeof fetch !== 'function') {
-  import('node-fetch').then(({ default: nodeFetch }) => {
-    (global as any).fetch = nodeFetch;
-  });
+// Ensure API key is available
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+if (!apiKey) {
+  throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY environment variable not set.');
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
+
+
+function fileToGenerativePart(dataUri: string) {
+    const match = dataUri.match(/^data:(.+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Invalid data URI.');
+    }
+    const [_, mimeType, data] = match;
+    return {
+      inlineData: {
+        data: data,
+        mimeType
+      },
+    };
 }
 
 
-const SynapseInputSchema = z.object({
-  prompt: z.string().describe('The user query.'),
-  systemPrompt: z.string().describe('The system prompt based on the selected mode.'),
-  media: z.string().optional().describe(
-    "Optional media file (e.g., image) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
-  ),
-  language: z.enum(['roman-urdu', 'english']).describe('The language for the AI response.'),
-});
-export type SynapseInput = z.infer<typeof SynapseInputSchema>;
+export async function synapse(
+    systemPrompt: string,
+    prompt: string,
+    media?: string
+) {
+    const hasMedia = !!media;
+    const modelName = hasMedia ? 'gemini-1.5-pro-latest' : 'gemini-1.5-flash-latest';
+    const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt, safetySettings });
 
-const SynapseOutputSchema = z.object({
-  content: z.any().describe('The AI-generated text response as a stream.'),
-});
-export type SynapseOutput = z.infer<typeof SynapseOutputSchema>;
+    const promptParts = [prompt];
+    const generativeParts = media ? [fileToGenerativePart(media)] : [];
 
-const AudioOutputSchema = z.object({
-  audio: z.string().optional().describe('The AI-generated audio response as a data URI.'),
-});
+    const result = await model.generateContentStream([...promptParts, ...generativeParts]);
 
-export async function synapse(input: SynapseInput): Promise<SynapseOutput> {
-  return synapseFlow(input);
+    const readableStream = new ReadableStream({
+        async start(controller) {
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                controller.enqueue(chunkText);
+            }
+            controller.close();
+        },
+    });
+
+    return { content: readableStream };
+}
+
+async function toWav(
+    pcmData: Buffer,
+    channels = 1,
+    rate = 24000,
+    sampleWidth = 2
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const writer = new wav.Writer({
+            channels,
+            sampleRate: rate,
+            bitDepth: sampleWidth * 8,
+        });
+
+        const bufs: Buffer[] = [];
+        writer.on('error', reject);
+        writer.on('data', (d: Buffer) => bufs.push(d));
+        writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
+
+        writer.write(pcmData);
+        writer.end();
+    });
 }
 
 export async function generateAudio(text: string) {
-  return generateAudioFlow(text);
-}
-
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
-
-const synapseFlow = ai.defineFlow(
-  {
-    name: 'synapseFlow',
-    inputSchema: SynapseInputSchema,
-    outputSchema: SynapseOutputSchema,
-  },
-  async (input) => {
+    const ttsModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-preview-tts' });
+    const result = await ttsModel.generateContent(text);
     
-    const promptParts = [];
-    promptParts.push({ text: input.systemPrompt });
+    // The response is not streamed and contains the audio directly.
+    // However, the SDK might wrap it in a way that requires extracting.
+    // Based on SDK docs, we expect audio_content in the response.
+    // This part might need adjustment based on the exact response structure.
+    // For now, assuming result.response.audio_content is the base64 audio.
+    const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
+    
+    if (!audioBase64) {
+         const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2' });
+         const result = await ttsModel.generateContent(text);
+         const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
+         if(!audioBase64) {
+            throw new Error('Audio generation failed, no audio content received.');
+         }
 
-    let modelToUse;
-    if (input.media) {
-        promptParts.push({ media: { url: input.media } });
-        modelToUse = googleAI.model('gemini-1.5-pro-latest');
-    } else {
-        modelToUse = googleAI.model('gemini-1.5-flash-latest');
     }
-    promptParts.push({ text: `User prompt: ${input.prompt}` });
-
-    const {stream} = ai.generateStream({
-        model: modelToUse,
-        prompt: promptParts,
-    });
-
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        for await (const chunk of stream) {
-          controller.enqueue(chunk.text);
-        }
-        controller.close();
-      },
-    });
-
-    return { content: readableStream as any };
-  }
-);
-
-const generateAudioFlow = ai.defineFlow(
-  {
-    name: 'generateAudioFlow',
-    inputSchema: z.string(),
-    outputSchema: AudioOutputSchema,
-  },
-  async (text) => {
-     const audioResult = await ai.generate({
-        model: googleAI.model('gemini-1.5-flash-preview-tts'),
-        config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-                voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                },
-            },
-        },
-        prompt: text,
-    });
-
-    let audioDataUri: string | undefined = undefined;
-    if (audioResult.media) {
-        const audioBuffer = Buffer.from(
-            audioResult.media.url.substring(audioResult.media.url.indexOf(',') + 1),
-            'base64'
-        );
-        const wavBase64 = await toWav(audioBuffer);
-        audioDataUri = 'data:audio/wav;base64,' + wavBase64;
-    }
-     return { audio: audioDataUri };
-  }
-);
+    
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const wavBase64 = await toWav(audioBuffer);
+    const audioDataUri = 'data:audio/wav;base64,' + wavBase64;
+    
+    return { audio: audioDataUri };
+}
