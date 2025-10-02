@@ -43,7 +43,7 @@ export async function synapse(
     media?: string
 ) {
     const hasMedia = !!media;
-    const modelName = hasMedia ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+    const modelName = hasMedia ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
     const model = googleAI.model(modelName);
 
     const promptParts: Part[] = [{ text: prompt }];
@@ -83,7 +83,7 @@ export async function synapse(
 
 
 export async function generateAudio(text: string) {
-    const ttsModel = googleAI.model('text-to-speech-2');
+    const ttsModel = googleAI.model('gemini-2.5-pro-preview-tts');
     
     const { media } = await generate({
         model: ttsModel,
