@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file defines the core AI interaction flows for the Synapse Pakistan application.
@@ -6,7 +7,7 @@
  * - generateAudio - A function for text-to-speech generation.
  */
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import wav from 'wav';
 import { Readable } from 'stream';
 
@@ -16,7 +17,7 @@ if (!apiKey) {
   throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY environment variable not set.');
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = new GoogleGenAI(apiKey);
 
 const safetySettings = [
   {
@@ -59,7 +60,7 @@ export async function synapse(
     media?: string
 ) {
     const hasMedia = !!media;
-    const modelName = hasMedia ? 'gemini-1.5-pro-latest' : 'gemini-1.5-flash-latest';
+    const modelName = hasMedia ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
     const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt, safetySettings });
 
     const promptParts = [prompt];
@@ -104,7 +105,7 @@ async function toWav(
 }
 
 export async function generateAudio(text: string) {
-    const ttsModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-preview-tts' });
+    const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2' });
     const result = await ttsModel.generateContent(text);
     
     // The response is not streamed and contains the audio directly.
@@ -115,13 +116,7 @@ export async function generateAudio(text: string) {
     const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
     
     if (!audioBase64) {
-         const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2' });
-         const result = await ttsModel.generateContent(text);
-         const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
-         if(!audioBase64) {
-            throw new Error('Audio generation failed, no audio content received.');
-         }
-
+         throw new Error('Audio generation failed, no audio content received.');
     }
     
     const audioBuffer = Buffer.from(audioBase64, 'base64');
