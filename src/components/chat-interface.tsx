@@ -188,6 +188,7 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
           <SelectContent>
             <SelectItem value="roman-urdu">Roman Urdu</SelectItem>
             <SelectItem value="english">English</SelectItem>
+            <SelectItem value="pashto">Pashto</SelectItem>
           </SelectContent>
         </Select>
       </header>

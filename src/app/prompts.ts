@@ -1,8 +1,9 @@
-export type Language = 'roman-urdu' | 'english';
+export type Language = 'roman-urdu' | 'english' | 'pashto';
 
 const languageInstructions = {
   'roman-urdu': `Always respond in Roman Urdu, which is Urdu written using the English alphabet (e.g., "Aap kaise hain?"). Your responses should feel natural and conversational. Only switch to English if the user explicitly asks for it. Do not use the Urdu script (e.g., "آپ کیسے ہیں؟").`,
-  'english': `Always respond in English.`
+  'english': `Always respond in English.`,
+  'pashto': `Always respond in Pashto, using the Pashto script (e.g., "تاسو څنګه یاست؟"). Your responses should be natural and conversational. Only switch to another language if the user explicitly asks for it.`
 };
 
 const coreInstructions = `
