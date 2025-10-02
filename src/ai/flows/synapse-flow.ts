@@ -83,9 +83,9 @@ const synapseFlow = ai.defineFlow(
     let modelToUse;
     if (input.media) {
         promptParts.push({ media: { url: input.media } });
-        modelToUse = googleAI.model('gemini-pro-vision');
+        modelToUse = googleAI.model('gemini-1.5-pro-latest');
     } else {
-        modelToUse = googleAI.model('gemini-pro');
+        modelToUse = googleAI.model('gemini-1.5-flash-latest');
     }
     promptParts.push({ text: `User prompt: ${input.prompt}` });
 
