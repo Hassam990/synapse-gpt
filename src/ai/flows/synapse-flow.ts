@@ -105,7 +105,7 @@ async function toWav(
 }
 
 export async function generateAudio(text: string) {
-    const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2' });
+    const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2-hd' });
     const result = await ttsModel.generateContent(text);
     
     // The response is not streamed and contains the audio directly.
