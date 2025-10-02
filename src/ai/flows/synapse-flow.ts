@@ -7,79 +7,12 @@
  * - generateAudio - A function for text-to-speech generation.
  */
 
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
+import { generate } from 'genkit';
+import { Part, stream } from 'genkit/generate';
 import wav from 'wav';
-import { Readable } from 'stream';
 
-// Ensure API key is available
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-if (!apiKey) {
-  throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY environment variable not set.');
-}
-
-const genAI = new GoogleGenAI(apiKey);
-
-const safetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-];
-
-
-function fileToGenerativePart(dataUri: string) {
-    const match = dataUri.match(/^data:(.+);base64,(.+)$/);
-    if (!match) {
-      throw new Error('Invalid data URI.');
-    }
-    const [_, mimeType, data] = match;
-    return {
-      inlineData: {
-        data: data,
-        mimeType
-      },
-    };
-}
-
-
-export async function synapse(
-    systemPrompt: string,
-    prompt: string,
-    media?: string
-) {
-    const hasMedia = !!media;
-    const modelName = hasMedia ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
-    const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt, safetySettings });
-
-    const promptParts = [prompt];
-    const generativeParts = media ? [fileToGenerativePart(media)] : [];
-
-    const result = await model.generateContentStream([...promptParts, ...generativeParts]);
-
-    const readableStream = new ReadableStream({
-        async start(controller) {
-            for await (const chunk of result.stream) {
-                const chunkText = chunk.text();
-                controller.enqueue(chunkText);
-            }
-            controller.close();
-        },
-    });
-
-    return { content: readableStream };
-}
 
 async function toWav(
     pcmData: Buffer,
@@ -104,21 +37,70 @@ async function toWav(
     });
 }
 
+export async function synapse(
+    systemPrompt: string,
+    prompt: string,
+    media?: string
+) {
+    const hasMedia = !!media;
+    const modelName = hasMedia ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+    const model = googleAI.model(modelName);
+
+    const promptParts: Part[] = [{ text: prompt }];
+    if (media) {
+        const match = media.match(/^data:(.+);base64,(.+)$/);
+        if (match) {
+            const [_, mimeType, data] = match;
+            promptParts.push({ inlineData: { mimeType, data } });
+        }
+    }
+    
+    const { stream, response } = await ai.generateStream({
+        model,
+        prompt: promptParts,
+        config: {
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ]
+        },
+        system: systemPrompt,
+    });
+    
+    const readableStream = new ReadableStream({
+        async start(controller) {
+            for await (const chunk of stream) {
+                controller.enqueue(chunk.text);
+            }
+            controller.close();
+        },
+    });
+
+    return { content: readableStream };
+}
+
+
 export async function generateAudio(text: string) {
-    const ttsModel = genAI.getGenerativeModel({ model: 'text-to-speech-2-hd' });
-    const result = await ttsModel.generateContent(text);
+    const ttsModel = googleAI.model('text-to-speech-2');
     
-    // The response is not streamed and contains the audio directly.
-    // However, the SDK might wrap it in a way that requires extracting.
-    // Based on SDK docs, we expect audio_content in the response.
-    // This part might need adjustment based on the exact response structure.
-    const audioBase64 = (result.response as any)?.candidates[0]?.content?.parts[0]?.audioData;
-    
-    if (!audioBase64) {
+    const { media } = await generate({
+        model: ttsModel,
+        prompt: text,
+        config: {
+          responseModalities: ['AUDIO'],
+        },
+    });
+
+    if (!media) {
          throw new Error('Audio generation failed, no audio content received.');
     }
     
-    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
     const wavBase64 = await toWav(audioBuffer);
     const audioDataUri = 'data:audio/wav;base64,' + wavBase64;
     
