@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
 import type { Language } from "@/app/prompts";
@@ -39,70 +39,7 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
   const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const promptHandled = useRef(false);
 
-  useEffect(() => {
-    if (initialPrompt && !promptHandled.current) {
-      handleSendMessage(initialPrompt);
-      promptHandled.current = true;
-      // Use replaceState to remove the prompt from the URL without a full page reload
-      const newUrl = window.location.pathname;
-      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-    } else if (messages.length === 0) {
-        setMessages([
-          { id: uuidv4(), role: "assistant", content: welcomeMessage },
-        ]);
-    }
-  }, [initialPrompt]);
-  
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [messages]);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUri = e.target?.result as string;
-        handleSendMessage(input, dataUri);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleGenerateAudio = async (messageId: string, text: string) => {
-    setAudioLoading(messageId);
-    try {
-      const result = await generateAudioAction(text);
-      if (result.success && result.response?.audio) {
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
-          )
-        );
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error generating audio",
-          description: result.error,
-        });
-      }
-    } catch (error) {
-       toast({
-          variant: "destructive",
-          title: "Error generating audio",
-          description: error instanceof Error ? error.message : "An unknown error occurred.",
-        });
-    } finally {
-      setAudioLoading(null);
-    }
-  };
-
-  const handleSendMessage = (text: string, media?: string) => {
+  const handleSendMessage = useCallback((text: string, media?: string) => {
     if ((!text.trim() && !media) || isPending) return;
 
     const userMessage: Message = { id: uuidv4(), role: "user", content: text, media };
@@ -154,6 +91,69 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
         setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId));
       }
     });
+  }, [isPending, messages, selectedLanguage, selectedMode, toast]);
+
+  useEffect(() => {
+    if (initialPrompt && !promptHandled.current) {
+      handleSendMessage(initialPrompt);
+      promptHandled.current = true;
+      // Use replaceState to remove the prompt from the URL without a full page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    } else if (messages.length === 0) {
+        setMessages([
+          { id: uuidv4(), role: "assistant", content: welcomeMessage },
+        ]);
+    }
+  }, [initialPrompt, handleSendMessage, messages.length]);
+  
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUri = e.target?.result as string;
+        handleSendMessage(input, dataUri);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGenerateAudio = async (messageId: string, text: string) => {
+    setAudioLoading(messageId);
+    try {
+      const result = await generateAudioAction(text);
+      if (result.success && result.response?.audio) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
+          )
+        );
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error generating audio",
+          description: result.error,
+        });
+      }
+    } catch (error) {
+       toast({
+          variant: "destructive",
+          title: "Error generating audio",
+          description: error instanceof Error ? error.message : "An unknown error occurred.",
+        });
+    } finally {
+      setAudioLoading(null);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

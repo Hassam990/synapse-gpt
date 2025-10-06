@@ -9,15 +9,18 @@ export default function SplashScreen() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    // This effect can be used for any async tasks you need to run during startup.
+    // For now, we just simulate a quick loading bar.
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;
         }
-        return prev + 1;
+        // Simulate a faster loading process
+        return prev + 10;
       });
-    }, 25); // Controls the speed of the progress bar
+    }, 50); // Speed up the interval
 
     return () => clearInterval(interval);
   }, []);
@@ -34,6 +37,7 @@ export default function SplashScreen() {
         />
         <p className="text-lg text-muted-foreground">Pakistan’s First GPT-Powered AI</p>
       </div>
+       {/* The progress bar is now just for show and won't block rendering */}
       <div className="absolute bottom-10 w-full max-w-md px-4">
         <Progress value={progress} className="h-2 w-full progress-bar-primary" />
       </div>

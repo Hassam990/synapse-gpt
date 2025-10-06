@@ -4,8 +4,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { useEffect, useState } from 'react';
-import SplashScreen from '@/components/splash-screen';
 
 // This is a workaround to make metadata work with client components
 // export const metadata: Metadata = {
@@ -18,14 +16,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 3000); // 3 seconds
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <html lang="en" className="dark">
@@ -40,14 +30,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        {loading ? (
-          <SplashScreen />
-        ) : (
-          <>
-            {children}
-            <Toaster />
-          </>
-        )}
+        <>
+          {children}
+          <Toaster />
+        </>
       </body>
     </html>
   );
