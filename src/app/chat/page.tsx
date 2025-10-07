@@ -3,10 +3,8 @@
 import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
-  BrainCircuit,
   Plus,
   Settings,
-  Bot
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -31,9 +29,7 @@ function ChatPageContent() {
   const initialPrompt = searchParams.get('prompt');
 
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
       <ChatInterface initialPrompt={initialPrompt} />
-    </Suspense>
   );
 }
 
@@ -85,7 +81,9 @@ export default function ChatPage() {
                 <SidebarTrigger />
             </header>
             <main className="flex-grow flex flex-col p-1 sm:p-4 overflow-hidden">
-              <ChatPageContent />
+              <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                <ChatPageContent />
+              </Suspense>
             </main>
           </div>
         </SidebarInset>
