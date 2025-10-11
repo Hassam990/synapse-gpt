@@ -3,8 +3,10 @@
 import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
+  LogIn,
+  LogOut,
   Plus,
-  Settings,
+  User,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,10 @@ import {
 import { Suspense } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { useAuth, useUser } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { signOut } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function ChatPageContent() {
   const searchParams = useSearchParams();
@@ -34,6 +40,17 @@ function ChatPageContent() {
 }
 
 export default function ChatPage() {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  
+  const handleLogin = () => {
+    initiateAnonymousSignIn(auth);
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-background">
@@ -57,20 +74,37 @@ export default function ChatPage() {
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                    JA
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <p className="text-sm font-semibold">Muhammad Jahanzaib</p>
-                  <p className="text-xs text-muted-foreground">CEO & Founder</p>
+              {isUserLoading ? (
+                 <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="flex flex-col gap-1">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+              ) : user ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold">Anonymous User</p>
+                    <p className="text-xs text-muted-foreground">Guest</p>
+                  </div>
                 </div>
-              </div>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
+              ) : (
+                 <Button onClick={handleLogin} className="w-full">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+              )}
+               {user && (
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </SidebarFooter>
         </Sidebar>

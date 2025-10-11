@@ -21,15 +21,22 @@ import {
   Briefcase,
   GraduationCap,
   Lightbulb,
+  LogIn,
+  LogOut,
   PenSquare,
   Plus,
   Send,
   Settings,
+  User,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { useAuth, useUser } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { getAuth, signOut } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const suggestionCards = [
   {
@@ -61,6 +68,9 @@ const suggestionCards = [
 export default function Home() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
 
   const handlePromptSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -79,6 +89,14 @@ export default function Home() {
       description: 'The bank account IBAN has been copied to your clipboard.',
     });
   };
+
+  const handleLogin = () => {
+    initiateAnonymousSignIn(auth);
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+  }
 
   return (
     <SidebarProvider>
@@ -102,21 +120,38 @@ export default function Home() {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <div className="flex items-center justify-between p-2">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                    JA
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <p className="text-sm font-semibold">Muhammad Jahanzaib</p>
-                  <p className="text-xs text-muted-foreground">CEO & Founder</p>
+             <div className="flex items-center justify-between p-2">
+              {isUserLoading ? (
+                 <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="flex flex-col gap-1">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+              ) : user ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold">Anonymous User</p>
+                    <p className="text-xs text-muted-foreground">Guest</p>
+                  </div>
                 </div>
-              </div>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
+              ) : (
+                 <Button onClick={handleLogin} className="w-full">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+              )}
+               {user && (
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </SidebarFooter>
         </Sidebar>

@@ -8,7 +8,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user profile."
+          "description": "Unique identifier for the user profile, matching the Firebase Auth UID."
         },
         "name": {
           "type": "string",
@@ -31,8 +31,8 @@
         },
         "lastInteraction": {
           "type": "string",
-          "description": "Date and time of the user's last interaction with the AI.",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Date and time of the user's last interaction with the AI."
         },
         "memoryNotes": {
           "type": "string",
@@ -46,29 +46,15 @@
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}/profile",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profiles. Path-based ownership ensures only the authenticated user can access their profile data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, matching the Firebase Auth UID."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The data structure focuses on storing user profiles for personalized AI interaction in Synapse Pakistan. We leverage path-based ownership for storing user profiles. This allows secure and efficient retrieval and management of profile data. The structure ensures authorization independence by relying solely on `request.auth.uid` and the path. This structure supports the application's requirements for personalized AI assistance while adhering to the core design principles and strategy mandates. It supports list operations since each collection contains only entities with the same security posture."
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores individual user profiles. The document ID is the user's Firebase Auth UID, ensuring only the authenticated user can access their own profile."
+    }
   }
 }
