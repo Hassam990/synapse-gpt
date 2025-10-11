@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile with personalized information for the Synapse Pakistan AI.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "User's name."
+        },
+        "language": {
+          "type": "string",
+          "description": "User's preferred language (e.g., English, Urdu, Roman Urdu)."
+        },
+        "profession": {
+          "type": "string",
+          "description": "User's profession or occupation."
+        },
+        "interests": {
+          "type": "array",
+          "description": "User's interests, stored as an array of strings.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastInteraction": {
+          "type": "string",
+          "description": "Date and time of the user's last interaction with the AI.",
+          "format": "date-time"
+        },
+        "memoryNotes": {
+          "type": "string",
+          "description": "Additional notes about the user's preferences, goals, or past queries."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/profile",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profiles. Path-based ownership ensures only the authenticated user can access their profile data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching the Firebase Auth UID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The data structure focuses on storing user profiles for personalized AI interaction in Synapse Pakistan. We leverage path-based ownership for storing user profiles. This allows secure and efficient retrieval and management of profile data. The structure ensures authorization independence by relying solely on `request.auth.uid` and the path. This structure supports the application's requirements for personalized AI assistance while adhering to the core design principles and strategy mandates. It supports list operations since each collection contains only entities with the same security posture."
+  }
+}
