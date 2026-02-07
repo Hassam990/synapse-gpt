@@ -13,6 +13,7 @@ import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 export interface UserProfile {
   id: string;
   name?: string;
+  email?: string;
   language?: string;
   profession?: string;
   interests?: string[];

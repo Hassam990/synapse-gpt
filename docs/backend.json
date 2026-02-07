@@ -14,6 +14,11 @@
           "type": "string",
           "description": "User's name."
         },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address."
+        },
         "language": {
           "type": "string",
           "description": "User's preferred language (e.g., English, Urdu, Roman Urdu)."
@@ -46,7 +51,8 @@
   },
   "auth": {
     "providers": [
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {

@@ -16,7 +16,7 @@ import {
   SidebarMenuButton
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Code,
   LogIn,
@@ -33,13 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUser, useAuth } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { useUser, useAuth, useFirestore } from '@/firebase';
+import { signInAsGuest } from '@/firebase/non-blocking-login';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { executeCode } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import { signInWithGoogle } from '@/firebase/auth-actions';
 
 function CodeBuilderInterface() {
     const [code, setCode] = useState('');
@@ -88,7 +89,7 @@ function CodeBuilderInterface() {
     }
 
     return (
-        <div className="flex flex-col h-full w-full gap-4 p-4">
+        <div className="flex flex-col h-full w-full gap-4">
             <header className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-b border-border/20 rounded-lg bg-card">
                  <h1 className="text-xl font-bold shrink-0">Synapse Code Builder</h1>
                  <div className="flex w-full sm:w-auto items-center gap-4">
@@ -110,7 +111,7 @@ function CodeBuilderInterface() {
                  </div>
             </header>
             <div className="flex flex-col lg:flex-row gap-4 flex-grow min-h-0">
-                <div className="flex flex-col gap-2 lg:w-1/2 h-1/2 lg:h-full min-h-0">
+                <div className="flex flex-col gap-2 h-1/2 lg:h-full lg:w-1/2">
                     <h2 className="text-lg font-semibold">Code Editor</h2>
                     <div className="flex-grow min-h-0">
                       <Textarea 
@@ -121,7 +122,7 @@ function CodeBuilderInterface() {
                       />
                     </div>
                 </div>
-                <div className="flex flex-col gap-4 lg:w-1/2 h-1/2 lg:h-full min-h-0">
+                <div className="flex flex-col gap-4 h-1/2 lg:h-full lg:w-1/2">
                     <div className="flex flex-col gap-2 flex-grow min-h-0">
                         <h2 className="text-lg font-semibold">Output Terminal</h2>
                         <div className="flex-grow bg-black rounded-lg p-4 font-mono text-white text-sm overflow-auto">
@@ -144,17 +145,37 @@ function CodeBuilderInterface() {
     );
 }
 
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" {...props}>
+    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+    <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.99,35.15,44,28.623,44,20C44,22.659,43.862,21.35,43.611,20.083z"/>
+  </svg>
+);
+
 
 export default function CodeBuilderPage() {
     const { user, isUserLoading } = useUser();
     const auth = useAuth();
+    const firestore = useFirestore();
     
-    const handleLogin = () => {
-      initiateAnonymousSignIn(auth);
+    const handleGoogleLogin = () => {
+      if (auth && firestore) {
+        signInWithGoogle(auth, firestore);
+      }
+    };
+  
+    const handleGuestLogin = () => {
+      if(auth) {
+        signInAsGuest(auth);
+      }
     };
   
     const handleLogout = () => {
-      signOut(auth);
+      if (auth) {
+        signOut(auth);
+      }
     }
   
     return (
@@ -197,27 +218,32 @@ export default function CodeBuilderPage() {
                       </div>
                     </div>
                 ) : user ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <User className="h-5 w-5" />
+                      {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+                      <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                        {user.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col">
-                      <p className="text-sm font-semibold">Anonymous User</p>
-                      <p className="text-xs text-muted-foreground">Guest</p>
+                    <div className="flex flex-col flex-grow">
+                      <p className="text-sm font-semibold truncate">{user.displayName || 'Anonymous User'}</p>
+                      <p className="text-xs text-muted-foreground">{user.isAnonymous ? "Guest" : "Member"}</p>
                     </div>
+                     <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
                   </div>
                 ) : (
-                   <Button onClick={handleLogin} className="w-full">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
-                  </Button>
-                )}
-                 {user && (
-                  <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  <div className="w-full space-y-2">
+                    <Button onClick={handleGoogleLogin} className="w-full">
+                      <GoogleIcon className="mr-2 h-5 w-5" />
+                      Sign In with Google
+                    </Button>
+                    <Button variant="secondary" onClick={handleGuestLogin} className="w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Continue as Guest
+                    </Button>
+                  </div>
                 )}
               </div>
             </SidebarFooter>
@@ -228,7 +254,7 @@ export default function CodeBuilderPage() {
                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                   <SidebarTrigger />
               </header>
-              <main className="flex-grow flex flex-col overflow-hidden">
+              <main className="flex-grow flex flex-col overflow-hidden p-1 sm:p-4">
                 <CodeBuilderInterface />
               </main>
             </div>
