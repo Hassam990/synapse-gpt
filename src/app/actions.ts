@@ -1,7 +1,6 @@
 "use server";
 
 import { synapse, generateAudio, runCode as runCodeFlow } from "@/ai/flows/synapse-flow";
-import { prompts, type Language } from "./prompts";
 export type AiMode =
   | "conversation"
   | "assistance"
@@ -14,12 +13,12 @@ export interface Message {
     content: string;
     media?: string; // data URI for images
     audio?: string; // data URI for audio
+    timestamp?: any;
 }
 
 
-export async function invokeAI(mode: AiMode, messages: Message[], language: Language) {
+export async function invokeAI(systemPrompt: string, messages: Message[]) {
   try {
-    const systemPrompt = prompts[mode](language);
     const result = await synapse(systemPrompt, messages);
     return { success: true, response: result };
   } catch (error) {

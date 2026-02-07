@@ -31,6 +31,7 @@ import { signInAsGuest } from '@/firebase/non-blocking-login';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signInWithGoogle } from '@/firebase/auth-actions';
+import RecentChats from '@/components/recent-chats';
 
 function ChatPageContent() {
   const searchParams = useSearchParams();
@@ -102,6 +103,7 @@ export default function ChatPage() {
                     </Link>
                 </SidebarMenuItem>
             </SidebarMenu>
+             <Suspense fallback={null}><RecentChats /></Suspense>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">

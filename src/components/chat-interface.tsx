@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
+import { AiMode, invokeAI, Message } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,66 +17,151 @@ import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
-import type { Language } from "@/app/prompts";
+import { prompts, buildUserProfileContext, Language, UserProfileContext } from "@/app/prompts";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { UserProfile } from "@/services/user-profile-service";
+import { collection, addDoc, serverTimestamp, query, orderBy, getDoc, doc } from 'firebase/firestore';
+
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
-I am SYNAPSE, Pakistan's first GPT-powered AI assistant, created by Muhammad Jahanzaib Azam. My core strength is remembering our conversation in this session to provide a more personal experience.
+I am SYNAPSE, Pakistan's first GPT-powered AI assistant, created by Muhammad Jahanzaib Azam. For logged-in users, I remember our conversations to provide a more personal experience. For guests, my memory is session-based.
 
 How can I assist you today? Feel free to ask anything!`;
 
-export default function ChatInterface({ initialPrompt }: { initialPrompt: string | null }) {
+export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt?: string | null, chatId?: string }) {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('roman-urdu');
-  const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Local state for guest users or before a chat is created
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
+  
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-  const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const promptHandled = useRef(false);
 
-  const handleSendMessage = useCallback((text: string, media?: string) => {
+  // Fetch user profile for personalization
+  useEffect(() => {
+    if (user && firestore) {
+      const profileRef = doc(firestore, 'users', user.uid);
+      getDoc(profileRef).then(snap => {
+        if (snap.exists()) {
+          setUserProfile(snap.data() as UserProfile);
+        }
+      });
+    } else {
+      setUserProfile(null);
+    }
+  }, [user, firestore]);
+  
+  // Firestore-backed message state for logged-in users
+  const messagesQuery = useMemoFirebase(() => {
+    if (user && firestore && chatId) {
+      return query(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+    }
+    return null;
+  }, [user, firestore, chatId]);
+
+  const { data: firestoreMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
+  
+  const messages = user && chatId ? (firestoreMessages || []) : localMessages;
+
+  const handleSendMessage = useCallback(async (text: string, media?: string) => {
     if ((!text.trim() && !media) || isPending) return;
 
-    const userMessage: Message = { id: uuidv4(), role: "user", content: text, media };
-    const assistantMessageId = uuidv4();
+    const userMessage: Message = { id: uuidv4(), role: "user", content: text, media, timestamp: serverTimestamp() };
     
+    // Optimistically update UI
     const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
       ? [userMessage]
       : [...messages, userMessage];
-    
-    const fullHistory = [...newMessages, { id: assistantMessageId, role: 'assistant', content: '' }];
 
-    setMessages(fullHistory);
-    setInput("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (!user) { // Guest user
+      setLocalMessages(newMessages);
     }
 
+    setInput("");
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    
     startTransition(async () => {
+      let currentChatId = chatId;
+      
       try {
-        const result = await invokeAI(selectedMode, fullHistory.slice(0, -1), selectedLanguage);
+        // --- Persistence for logged-in users ---
+        if (user && firestore) {
+          // If it's a new chat, create it first
+          if (!chatId) {
+            const chatTitle = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+            const chatCollectionRef = collection(firestore, 'users', user.uid, 'chats');
+            const newChatDoc = await addDoc(chatCollectionRef, {
+              title: chatTitle,
+              userId: user.uid,
+              createdAt: serverTimestamp(),
+            });
+            currentChatId = newChatDoc.id;
+            // Add the user message to the new chat
+            await addDoc(collection(chatCollectionRef, currentChatId, 'messages'), userMessage);
+            router.replace(`/chat/${currentChatId}`, { scroll: false });
+            // The rest of the flow will be handled by the new page with the chatId
+            return; 
+          } else {
+            // It's an existing chat, just add the message
+            await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId!, 'messages'), userMessage);
+          }
+        }
+        // --- End Persistence ---
+
+        // Prepare for AI call
+        const profileContext = buildUserProfileContext(userProfile);
+        const systemPrompt = prompts[selectedMode](selectedLanguage, profileContext);
+        
+        const assistantMessageId = uuidv4();
+        if (!user) { // Optimistic assistant message for guests
+            setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
+        }
+
+        const result = await invokeAI(systemPrompt, newMessages);
+        
         if (result.success && result.response?.content) {
           const reader = result.response.content.getReader();
           let accumulatedContent = '';
+          const decoder = new TextDecoder();
 
           const read = async () => {
             const { done, value } = await reader.read();
             if (done) {
+              const finalAssistantMessage: Message = {
+                id: assistantMessageId,
+                role: 'assistant',
+                content: accumulatedContent,
+                timestamp: serverTimestamp(),
+              };
+              if (user && firestore && currentChatId) {
+                await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
+              }
               return;
             }
-            accumulatedContent += value;
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMessageId
-                  ? { ...msg, content: accumulatedContent }
-                  : msg
-              )
-            );
+            
+            accumulatedContent += decoder.decode(value, { stream: true });
+
+            if (!user) { // Live update for guest UI
+              setLocalMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
+                )
+              );
+            }
             read();
           };
           read();
@@ -89,24 +174,32 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
           title: "Error",
           description: error instanceof Error ? error.message : String(error),
         });
-        setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId));
+        if (!user) {
+          setLocalMessages(prev => prev.slice(0, -2)); // remove user and assistant placeholder
+        }
       }
     });
-  }, [isPending, messages, selectedLanguage, selectedMode, toast]);
+  }, [isPending, messages, selectedLanguage, selectedMode, toast, user, firestore, chatId, userProfile, router]);
 
+
+  // Effect to handle initial state (welcome message or initial prompt)
   useEffect(() => {
-    if (initialPrompt && !promptHandled.current) {
+    const isChatEmpty = messages.length === 0;
+    if (initialPrompt && !promptHandled.current && isChatEmpty) {
       handleSendMessage(initialPrompt);
       promptHandled.current = true;
-      const newUrl = window.location.pathname;
-      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-    } else if (messages.length === 0) {
-        setMessages([
+       if (typeof window !== 'undefined') {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+       }
+    } else if (isChatEmpty && !isLoadingMessages) {
+        setLocalMessages([
           { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
-  }, [initialPrompt, handleSendMessage, messages.length]);
+  }, [initialPrompt, handleSendMessage, messages.length, isLoadingMessages]);
   
+  // Effect to scroll to bottom on new messages
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
@@ -133,11 +226,12 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
     try {
       const result = await generateAudioAction(text);
       if (result.success && result.response?.audio) {
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
+        const newMessages = messages.map(msg => 
             msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
-          )
-        );
+          );
+        // This is tricky with firestore. For now, we don't persist the audio URI.
+        setLocalMessages(newMessages);
+
       } else {
         toast({
           variant: "destructive",
@@ -197,6 +291,11 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
       <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="space-y-6 p-4 w-full max-w-4xl mx-auto">
+            {isLoadingMessages && (
+                 <div className="flex justify-center items-center h-full p-8">
+                    <Loader className="h-6 w-6 animate-spin" />
+                 </div>
+            )}
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -251,7 +350,7 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
                 )}
               </div>
             ))}
-             {isPending && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === '' && (
+             {isPending && (
               <div className="flex items-start gap-3 animate-message-in">
                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
                     <Bot className="h-5 w-5 text-primary-foreground" />

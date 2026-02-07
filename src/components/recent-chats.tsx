@@ -1,48 +1,71 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import { MessageSquare } from 'lucide-react';
-import { useChatHistory, Chat } from '@/hooks/use-chat-history';
 import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
+import { usePathname } from 'next/navigation';
+import { Skeleton } from './ui/skeleton';
 
 export default function RecentChats() {
-  const { getRecentChats } = useChatHistory();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    // This effect ensures that we only access localStorage on the client side
-    setChats(getRecentChats());
-  }, [getRecentChats]);
-  
-  // A simple loading state
-  if (!chats.length) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">No recent chats.</div>
+  const chatsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'chats'),
+      orderBy('createdAt', 'desc')
     );
+  }, [user, firestore]);
+
+  const { data: chats, isLoading } = useCollection<{ id: string; title: string; createdAt: any }>(chatsQuery);
+
+  if (isUserLoading || (user && isLoading)) {
+      return (
+          <div className="p-2 mt-4 space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+          </div>
+      );
   }
 
+  // Don't show anything for guest users
+  if (!user) {
+    return null;
+  }
+
+  if (!chats || chats.length === 0) {
+    return (
+      <div className="p-4 text-sm text-center text-muted-foreground">No recent chats.</div>
+    );
+  }
+  
   return (
-    <SidebarMenu>
-      {chats.map((chat) => (
-        <SidebarMenuItem key={chat.id}>
-          <Link href={`/chat/${chat.id}`} className="w-full">
-            <SidebarMenuButton className="text-sm font-normal justify-start w-full">
-              <MessageSquare className="h-4 w-4" />
-              <div className="flex flex-col items-start truncate">
+    <div className="mt-4">
+        <h2 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Chats</h2>
+        <SidebarMenu>
+        {chats.map((chat) => (
+            <SidebarMenuItem key={chat.id}>
+            <Link href={`/chat/${chat.id}`} className="w-full">
+                <SidebarMenuButton 
+                className="text-sm font-normal justify-start w-full"
+                isActive={pathname === `/chat/${chat.id}`}
+                >
+                <MessageSquare className="mr-2 h-4 w-4" />
                 <span className="truncate">{chat.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(chat.timestamp).toLocaleDateString()}
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+                </SidebarMenuButton>
+            </Link>
+            </SidebarMenuItem>
+        ))}
+        </SidebarMenu>
+    </div>
   );
 }

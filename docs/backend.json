@@ -47,6 +47,33 @@
       "required": [
         "id"
       ]
+    },
+    "Chat": {
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a single chat session with a user.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the chat." },
+        "userId": { "type": "string", "description": "The ID of the user who owns this chat." },
+        "title": { "type": "string", "description": "A short title for the chat, usually from the first message." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the chat was created." },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last message in the chat." }
+      },
+      "required": ["id", "userId", "title", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "type": "object",
+      "description": "A single message in a chat.",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "media": { "type": "string", "description": "data URI for images" },
+        "audio": { "type": "string", "description": "data URI for audio" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "role", "content", "timestamp"]
     }
   },
   "auth": {
@@ -60,7 +87,13 @@
       "schema": {
         "$ref": "#/entities/UserProfile"
       },
-      "description": "Stores individual user profiles. The document ID is the user's Firebase Auth UID, ensuring only the authenticated user can access their own profile."
+      "description": "Stores individual user profiles. The document ID is the user's Firebase Auth UID."
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": {
+        "$ref": "#/entities/Chat"
+      },
+      "description": "Stores metadata for chat sessions. Messages are stored in a `messages` subcollection within each chat document."
     }
   }
 }
