@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -21,11 +22,11 @@ export default function RecentChats() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'users', user.uid, 'chats'),
-      orderBy('createdAt', 'desc')
+      orderBy('lastMessageTimestamp', 'desc')
     );
   }, [user, firestore]);
 
-  const { data: chats, isLoading } = useCollection<{ id: string; title: string; createdAt: any }>(chatsQuery);
+  const { data: chats, isLoading } = useCollection<{ id: string; title: string; lastMessageTimestamp: any }>(chatsQuery);
 
   if (isUserLoading || (user && isLoading)) {
       return (
@@ -69,3 +70,5 @@ export default function RecentChats() {
     </div>
   );
 }
+
+    

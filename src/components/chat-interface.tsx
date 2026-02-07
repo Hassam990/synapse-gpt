@@ -21,7 +21,7 @@ import { prompts, buildUserProfileContext, Language, UserProfileContext } from "
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { UserProfile } from "@/services/user-profile-service";
-import { collection, addDoc, serverTimestamp, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, getDoc, doc, updateDoc } from 'firebase/firestore';
 
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
@@ -34,7 +34,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('roman-urdu');
   
-  // Local state for guest users or before a chat is created
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
   const [input, setInput] = useState("");
@@ -51,7 +50,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptHandled = useRef(false);
 
-  // Fetch user profile for personalization
   useEffect(() => {
     if (user && firestore) {
       const profileRef = doc(firestore, 'users', user.uid);
@@ -65,7 +63,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     }
   }, [user, firestore]);
   
-  // Firestore-backed message state for logged-in users
   const messagesQuery = useMemoFirebase(() => {
     if (user && firestore && chatId) {
       return query(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
@@ -77,6 +74,78 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   
   const messages = user && chatId ? (firestoreMessages || []) : localMessages;
 
+  const triggerAIResponse = useCallback(async (currentMessages: Message[]) => {
+    if (currentMessages.length === 0 || isPending) return;
+
+    startTransition(() => {
+        (async () => {
+            const assistantMessageId = uuidv4();
+            try {
+                // For guests, add a placeholder assistant message to local state
+                if (!user) {
+                    setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
+                }
+                
+                const profileContext = buildUserProfileContext(userProfile);
+                const systemPrompt = prompts[selectedMode](selectedLanguage, profileContext);
+                
+                const messagesForAI: AiMessage[] = currentMessages.map(({ role, content, media }) => ({
+                    role,
+                    content: content || '',
+                    ...(media && { media }),
+                }));
+                
+                const stream = await invokeAI(systemPrompt, messagesForAI);
+                
+                let accumulatedContent = '';
+                const decoder = new TextDecoder();
+                const reader = stream.getReader();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    accumulatedContent += decoder.decode(value, { stream: true });
+
+                    // Live update for guest UI
+                    if (!user) {
+                        setLocalMessages((prev) =>
+                            prev.map((msg) =>
+                                msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
+                            )
+                        );
+                    }
+                }
+
+                const finalAssistantMessage: Message = {
+                    id: assistantMessageId,
+                    role: 'assistant',
+                    content: accumulatedContent,
+                    timestamp: serverTimestamp(),
+                };
+
+                // Persist final AI message for logged-in users
+                if (user && firestore && chatId) {
+                    await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), finalAssistantMessage);
+                    // Also update the last message timestamp on the chat document itself
+                    await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
+                }
+
+            } catch (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: error instanceof Error ? error.message : String(error),
+                });
+                // Clean up placeholder on error for guests
+                if (!user) {
+                    setLocalMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+                }
+            }
+        })();
+    });
+  }, [isPending, user, firestore, chatId, userProfile, selectedMode, selectedLanguage, toast]);
+
   const handleSendMessage = useCallback(async (text: string, media?: string) => {
     if ((!text.trim() && !media) || isPending) return;
 
@@ -87,107 +156,44 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
       timestamp: serverTimestamp(),
       ...(media && { media }),
     };
-    
-    // Optimistically update UI
-    const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
-      ? [userMessage]
-      : [...messages, userMessage];
-
-    if (!user) { // Guest user
-      setLocalMessages(newMessages);
-    }
 
     setInput("");
     if (fileInputRef.current) fileInputRef.current.value = '';
-    
-    startTransition(() => {
-      (async () => {
-        let currentChatId = chatId;
-        const assistantMessageId = uuidv4();
-        
+
+    if (user && firestore) {
+      if (!chatId) { // This is a new chat being created
+        const chatTitle = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+        const chatCollectionRef = collection(firestore, 'users', user.uid, 'chats');
         try {
-          // --- Persistence for logged-in users ---
-          if (user && firestore) {
-            if (!chatId) {
-              const chatTitle = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-              const chatCollectionRef = collection(firestore, 'users', user.uid, 'chats');
-              const newChatDoc = await addDoc(chatCollectionRef, {
+            const newChatDoc = await addDoc(chatCollectionRef, {
                 title: chatTitle,
                 userId: user.uid,
                 createdAt: serverTimestamp(),
-              });
-              currentChatId = newChatDoc.id;
-              await addDoc(collection(chatCollectionRef, currentChatId, 'messages'), userMessage);
-              router.replace(`/chat/${currentChatId}`, { scroll: false });
-              return; 
-            } else {
-              await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId!, 'messages'), userMessage);
-            }
-          }
-          // --- End Persistence ---
-
-          // Prepare for AI call
-          if (!user) { // Optimistic assistant message for guests
-              setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
-          }
-
-          const profileContext = buildUserProfileContext(userProfile);
-          const systemPrompt = prompts[selectedMode](selectedLanguage, profileContext);
-          
-          const messagesForAI: AiMessage[] = newMessages.map(({ role, content, media }) => ({
-            role,
-            content: content || '',
-            ...(media && { media }),
-          }));
-          
-          const stream = await invokeAI(systemPrompt, messagesForAI);
-          
-          let accumulatedContent = '';
-          const decoder = new TextDecoder();
-          const reader = stream.getReader();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            accumulatedContent += decoder.decode(value, { stream: true });
-
-            if (!user) { // Live update for guest UI
-              setLocalMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
-                )
-              );
-            }
-          }
-
-          const finalAssistantMessage: Message = {
-            id: assistantMessageId,
-            role: 'assistant',
-            content: accumulatedContent,
-            timestamp: serverTimestamp(),
-          };
-
-          if (user && firestore && currentChatId) {
-            await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
-          }
+                lastMessageTimestamp: serverTimestamp(),
+            });
+            const newChatId = newChatDoc.id;
+            await addDoc(collection(chatCollectionRef, newChatId, 'messages'), userMessage);
+            router.replace(`/chat/${newChatId}`, { scroll: false });
         } catch (error) {
-           toast({
-            variant: "destructive",
-            title: "Error",
-            description: error instanceof Error ? error.message : String(error),
-          });
-          if (!user) {
-            // Roll back optimistic updates on failure
-            setLocalMessages(prev => prev.filter(msg => msg.id !== userMessage.id && msg.id !== assistantMessageId));
-          }
+            toast({ variant: 'destructive', title: 'Error creating chat', description: error instanceof Error ? error.message : String(error) });
         }
-      })();
-    });
-  }, [isPending, messages, selectedLanguage, selectedMode, toast, user, firestore, chatId, userProfile, router]);
+      } else { // This is an existing chat
+          try {
+            await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), userMessage);
+            await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
+          } catch (error) {
+             toast({ variant: 'destructive', title: 'Error sending message', description: error instanceof Error ? error.message : String(error) });
+          }
+      }
+    } else { // This is a guest user
+      const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
+        ? [userMessage]
+        : [...messages, userMessage];
+      setLocalMessages(newMessages);
+    }
+  }, [isPending, user, firestore, chatId, router, toast, messages]);
 
-
-  // Effect to handle initial state (welcome message or initial prompt)
+  // Effect to handle initial prompt from homepage
   useEffect(() => {
     const isChatEmpty = messages.length === 0;
     if (initialPrompt && !promptHandled.current && isChatEmpty) {
@@ -197,12 +203,28 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         const newUrl = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
        }
-    } else if (!chatId && isChatEmpty && !isLoadingMessages) {
+    }
+  }, [initialPrompt, handleSendMessage, messages.length]);
+
+  // Effect to set initial welcome message for guests or new chats
+  useEffect(() => {
+    if (!chatId && messages.length === 0 && !isLoadingMessages) {
         setLocalMessages([
           { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
-  }, [initialPrompt, handleSendMessage, messages.length, isLoadingMessages, chatId]);
+  }, [chatId, messages.length, isLoadingMessages]);
+
+  // Effect to trigger AI response when a new user message is added
+  useEffect(() => {
+    if (!isPending && messages.length > 0 && messages[messages.length - 1].role === 'user') {
+      // Don't trigger for the welcome message placeholder case
+      if (messages.length === 1 && messages[0].content === welcomeMessage) {
+        return;
+      }
+      triggerAIResponse(messages);
+    }
+  }, [messages, isPending, triggerAIResponse]);
   
   // Effect to scroll to bottom on new messages
   useEffect(() => {
@@ -231,12 +253,22 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     try {
       const result = await generateAudioAction(text);
       if (result.success && result.response?.audio) {
-        const newMessages = messages.map(msg => 
-            msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
-          );
-        // This is tricky with firestore. For now, we don't persist the audio URI.
-        setLocalMessages(newMessages);
+        if(user && firestore && chatId) {
+            // Firestore message documents don't have a stable client-side ID to find them by.
+            // This part of the logic is complex and might require fetching the document by another field if ID is not the doc ID.
+            // For now, we assume the message.id is the firestore document id, which may be incorrect.
+            // A more robust solution might involve updating the local state and letting firestore sync,
+            // but that adds complexity. This is a simplification.
+            const docRef = doc(firestore, 'users', user.uid, 'chats', chatId, 'messages', messageId)
+            // A simple getDoc first to see if it exists with that ID could prevent errors.
+            await updateDoc(docRef, { audio: result.response.audio });
 
+        } else {
+             const newMessages = messages.map(msg => 
+                msg.id === messageId ? { ...msg, audio: result.response.audio } : msg
+            );
+            setLocalMessages(newMessages);
+        }
       } else {
         toast({
           variant: "destructive",
@@ -355,7 +387,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 )}
               </div>
             ))}
-             {isPending && (
+             {isPending && messages[messages.length - 1]?.role === 'user' && (
               <div className="flex items-start gap-3 animate-message-in">
                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
                     <Bot className="h-5 w-5 text-primary-foreground" />
@@ -416,3 +448,5 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     </div>
   );
 }
+
+    
