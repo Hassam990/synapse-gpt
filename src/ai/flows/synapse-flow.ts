@@ -44,24 +44,24 @@ export async function synapse(
   const historyToParts = (history: AiMessage[]): Part[] => {
     const parts: Part[] = [];
     for (const message of history) {
-        if (message.role === 'user') {
-             const userContentParts: (TextPart | MediaPart)[] = [{text: message.content}];
-             if (message.media) {
-                const match = message.media.match(/^data:(.+);base64,(.+)$/);
-                if (match) {
-                    const [, mimeType, data] = match;
-                    userContentParts.push({
-                        media: {
-                            url: `data:${mimeType};base64,${data}`,
-                            contentType: mimeType,
-                        },
-                    });
-                }
-             }
-             parts.push(...userContentParts);
-        } else if (message.role === 'assistant') {
-            parts.push({ role: 'model', parts: [{ text: message.content }] });
+      if (message.role === 'user') {
+        const userContentParts: (TextPart | MediaPart)[] = [{ text: message.content }];
+        if (message.media) {
+          const match = message.media.match(/^data:(.+);base64,(.+)$/);
+          if (match) {
+            const [, mimeType] = match;
+            userContentParts.push({
+              media: {
+                url: message.media,
+                contentType: mimeType,
+              },
+            });
+          }
         }
+        parts.push({ role: 'user', parts: userContentParts });
+      } else if (message.role === 'assistant') {
+        parts.push({ role: 'model', parts: [{ text: message.content }] });
+      }
     }
     return parts;
   };
