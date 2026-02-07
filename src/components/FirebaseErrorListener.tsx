@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,7 +32,10 @@ export function FirebaseErrorListener() {
 
   // On re-render, if an error exists in state, throw it.
   if (error) {
-    throw error;
+    // THROW A PLAIN ERROR to avoid serialization issues in Next.js error boundaries.
+    // The original error's message contains all the rich context needed for debugging,
+    // but the error object itself must be a plain 'new Error()' to be serializable.
+    throw new Error(error.message);
   }
 
   // This component renders nothing.
