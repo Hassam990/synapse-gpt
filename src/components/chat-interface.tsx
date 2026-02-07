@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AiMode, invokeAI, Message } from "@/app/actions";
+import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -80,7 +80,13 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   const handleSendMessage = useCallback(async (text: string, media?: string) => {
     if ((!text.trim() && !media) || isPending) return;
 
-    const userMessage: Message = { id: uuidv4(), role: "user", content: text, media, timestamp: serverTimestamp() };
+    const userMessage: Message = {
+      id: uuidv4(),
+      role: "user",
+      content: text,
+      timestamp: serverTimestamp(),
+      ...(media && { media }),
+    };
     
     // Optimistically update UI
     const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
