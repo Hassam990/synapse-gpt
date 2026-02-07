@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -87,12 +88,12 @@ function CodeBuilderInterface() {
     }
 
     return (
-        <div className="flex flex-col h-full w-full gap-4">
-            <header className="flex items-center justify-between p-4 border-b border-border/20 rounded-lg bg-card">
-                 <h1 className="text-xl font-bold">Synapse Code Builder</h1>
-                 <div className="flex items-center gap-4">
+        <div className="flex flex-col h-full w-full gap-4 p-4">
+            <header className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-b border-border/20 rounded-lg bg-card">
+                 <h1 className="text-xl font-bold shrink-0">Synapse Code Builder</h1>
+                 <div className="flex w-full sm:w-auto items-center gap-4">
                      <Select value={language} onValueChange={setLanguage}>
-                        <SelectTrigger className="w-[180px] bg-secondary">
+                        <SelectTrigger className="w-full sm:w-[180px] bg-secondary">
                             <SelectValue placeholder="Select language" />
                         </SelectTrigger>
                         <SelectContent>
@@ -102,38 +103,39 @@ function CodeBuilderInterface() {
                             <SelectItem value="c">C</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button onClick={handleRunCode} disabled={isLoading}>
+                    <Button onClick={handleRunCode} disabled={isLoading} className="w-full sm:w-auto">
                         <Play className="mr-2 h-4 w-4" />
                         {isLoading ? 'Running...' : 'Run'}
                     </Button>
                  </div>
             </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
-                <div className="flex flex-col gap-2">
+            <div className="flex flex-col lg:flex-row gap-4 flex-grow min-h-0">
+                <div className="flex flex-col gap-2 lg:w-1/2 h-1/2 lg:h-full min-h-0">
                     <h2 className="text-lg font-semibold">Code Editor</h2>
-                    <Textarea 
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        placeholder={placeholderCode[language] || 'Write your code here...'}
-                        className="flex-grow font-mono bg-card border-border/20 text-base"
-                        rows={20}
-                    />
+                    <div className="flex-grow min-h-0">
+                      <Textarea 
+                          value={code}
+                          onChange={(e) => setCode(e.target.value)}
+                          placeholder={placeholderCode[language] || 'Write your code here...'}
+                          className="w-full h-full resize-none font-mono bg-card border-border/20 text-base"
+                      />
+                    </div>
                 </div>
-                <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2 flex-grow">
+                <div className="flex flex-col gap-4 lg:w-1/2 h-1/2 lg:h-full min-h-0">
+                    <div className="flex flex-col gap-2 flex-grow min-h-0">
                         <h2 className="text-lg font-semibold">Output Terminal</h2>
                         <div className="flex-grow bg-black rounded-lg p-4 font-mono text-white text-sm overflow-auto">
                             <pre>{isLoading ? 'Executing code...' : output || '// Output will be shown here'}</pre>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 shrink-0">
                         <h2 className="text-lg font-semibold">Standard Input (stdin)</h2>
                         <Textarea
                             value={stdin}
                             onChange={(e) => setStdin(e.target.value)}
                             placeholder="Provide input for your program here, one line per input."
                             className="font-mono bg-card border-border/20 text-base"
-                            rows={5}
+                            rows={3}
                         />
                     </div>
                 </div>
