@@ -136,44 +136,40 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
           
           const messagesForAI: AiMessage[] = newMessages.map(({ role, content, media }) => ({
             role,
-            content,
+            content: content || '',
             ...(media && { media }),
           }));
           
-          const result = await invokeAI(systemPrompt, messagesForAI);
+          const stream = await invokeAI(systemPrompt, messagesForAI);
           
-          if (result.success && result.response?.content) {
-            const reader = result.response.content.getReader();
-            let accumulatedContent = '';
-            const decoder = new TextDecoder();
+          let accumulatedContent = '';
+          const decoder = new TextDecoder();
+          const reader = stream.getReader();
 
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              accumulatedContent += decoder.decode(value, { stream: true });
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            accumulatedContent += decoder.decode(value, { stream: true });
 
-              if (!user) { // Live update for guest UI
-                setLocalMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
-                  )
-                );
-              }
+            if (!user) { // Live update for guest UI
+              setLocalMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
+                )
+              );
             }
+          }
 
-            const finalAssistantMessage: Message = {
-              id: assistantMessageId,
-              role: 'assistant',
-              content: accumulatedContent,
-              timestamp: serverTimestamp(),
-            };
-            if (user && firestore && currentChatId) {
-              await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
-            }
+          const finalAssistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: accumulatedContent,
+            timestamp: serverTimestamp(),
+          };
 
-          } else {
-            throw new Error(result.error || "An unknown error occurred.");
+          if (user && firestore && currentChatId) {
+            await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
           }
         } catch (error) {
            toast({

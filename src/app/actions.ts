@@ -27,13 +27,18 @@ export interface AiMessage {
 
 export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
   try {
+    // The synapse function returns an object { content: ReadableStream }
     const result = await synapse(systemPrompt, messages);
-    return { success: true, response: result };
+    // We return the stream directly. This is the correct way to handle streaming
+    // responses from server actions.
+    return result.content;
   } catch (error) {
     console.error("AI invocation failed:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred.";
-    return { success: false, error: errorMessage };
+    // When an error occurs, we throw it so the client's catch block can handle it.
+    // We wrap it in a new Error to ensure it's a plain, serializable object.
+    throw new Error(
+      error instanceof Error ? error.message : "An unknown error occurred."
+    );
   }
 }
 
