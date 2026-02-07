@@ -226,7 +226,7 @@ export default function CodeBuilderPage() {
                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                   <SidebarTrigger />
               </header>
-              <main className="flex-grow flex flex-col overflow-hidden p-4">
+              <main className="flex-grow flex flex-col overflow-hidden">
                 <CodeBuilderInterface />
               </main>
             </div>
