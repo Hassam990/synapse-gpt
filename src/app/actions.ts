@@ -1,6 +1,6 @@
 "use server";
 
-import { synapse, generateAudio } from "@/ai/flows/synapse-flow";
+import { synapse, generateAudio, runCode as runCodeFlow } from "@/ai/flows/synapse-flow";
 import { prompts, type Language } from "./prompts";
 export type AiMode =
   | "conversation"
@@ -17,10 +17,10 @@ export interface Message {
 }
 
 
-export async function invokeAI(mode: AiMode, prompt: string, language: Language, media?: string) {
+export async function invokeAI(mode: AiMode, messages: Message[], language: Language) {
   try {
     const systemPrompt = prompts[mode](language);
-    const result = await synapse(systemPrompt, prompt, media);
+    const result = await synapse(systemPrompt, messages);
     return { success: true, response: result };
   } catch (error) {
     console.error("AI invocation failed:", error);
@@ -40,4 +40,16 @@ export async function generateAudioAction(text: string) {
       error instanceof Error ? error.message : "An unknown error occurred.";
     return { success: false, error: errorMessage };
   }
+}
+
+export async function executeCode(code: string, language: string) {
+    try {
+        const result = await runCodeFlow(code, language);
+        return { success: true, response: result };
+    } catch (error) {
+        console.error("Code execution failed:", error);
+        const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
 }

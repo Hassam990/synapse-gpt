@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Bot,
   Briefcase,
+  Code,
   GraduationCap,
   Lightbulb,
   LogIn,
@@ -114,6 +115,14 @@ export default function Home() {
                         <SidebarMenuButton className="w-full justify-start">
                         <Plus className="mr-2 h-4 w-4" />
                         New Chat
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Link href="/code-builder" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <Code className="mr-2 h-4 w-4" />
+                        Code Builder
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>

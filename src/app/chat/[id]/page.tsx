@@ -3,6 +3,7 @@ import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
   BrainCircuit,
+  Code,
   Plus,
   Settings
 } from 'lucide-react';
@@ -16,6 +17,9 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton
 } from '@/components/ui/sidebar';
 import Image from 'next/image';
 
@@ -37,12 +41,24 @@ export default function ChatWithIdPage() {
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
-            <Link href="/chat">
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
-              </Button>
-            </Link>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                <Link href="/chat" className="w-full">
+                    <SidebarMenuButton className="w-full justify-start">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Chat
+                    </SidebarMenuButton>
+                </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Link href="/code-builder" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <Code className="mr-2 h-4 w-4" />
+                        Code Builder
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center justify-between p-2">

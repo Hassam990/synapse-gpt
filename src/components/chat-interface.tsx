@@ -22,9 +22,9 @@ import { cn } from "@/lib/utils";
 
 const welcomeMessage = `Assalam-o-Alaikum! Hello there!
 
-I am SYNAPSE, Pakistan's first GPT-powered AI assistant, created by Muhammad Jahanzaib Azam. My creator has asked me to encourage you to help the people of Palestine.
+I am SYNAPSE, Pakistan's first GPT-powered AI assistant, created by Muhammad Jahanzaib Azam. My core strength is remembering our conversation in this session to provide a more personal experience.
 
-How can I assist you today, keeping our unique Pakistani context and culture in mind? Feel free to ask anything!`;
+How can I assist you today? Feel free to ask anything!`;
 
 export default function ChatInterface({ initialPrompt }: { initialPrompt: string | null }) {
   const [selectedMode, setSelectedMode] = useState<AiMode>("conversation");
@@ -45,12 +45,13 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
     const userMessage: Message = { id: uuidv4(), role: "user", content: text, media };
     const assistantMessageId = uuidv4();
     
-    // If it's the very first message from a prompt, clear the welcome message.
     const newMessages = messages.length === 1 && messages[0].content === welcomeMessage
       ? [userMessage]
       : [...messages, userMessage];
+    
+    const fullHistory = [...newMessages, { id: assistantMessageId, role: 'assistant', content: '' }];
 
-    setMessages([...newMessages, { id: assistantMessageId, role: 'assistant', content: '' }]);
+    setMessages(fullHistory);
     setInput("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -58,7 +59,7 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
 
     startTransition(async () => {
       try {
-        const result = await invokeAI(selectedMode, text, selectedLanguage, media);
+        const result = await invokeAI(selectedMode, fullHistory.slice(0, -1), selectedLanguage);
         if (result.success && result.response?.content) {
           const reader = result.response.content.getReader();
           let accumulatedContent = '';
@@ -97,7 +98,6 @@ export default function ChatInterface({ initialPrompt }: { initialPrompt: string
     if (initialPrompt && !promptHandled.current) {
       handleSendMessage(initialPrompt);
       promptHandled.current = true;
-      // Use replaceState to remove the prompt from the URL without a full page reload
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     } else if (messages.length === 0) {

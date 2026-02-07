@@ -1,8 +1,10 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import type { Part } from 'genkit';  // or from @genkit-ai/ai depending on your version
+import type { Part } from 'genkit';
 import wav from 'wav';
+import { prompts } from '@/app/prompts';
+import type { Message } from '@/app/actions';
 
 async function toWav(
   pcmData: Buffer,
@@ -29,27 +31,47 @@ async function toWav(
 
 export async function synapse(
   systemPrompt: string,
-  prompt: string,
-  media?: string
+  history: Message[]
 ) {
+  const latestMessage = history[history.length - 1];
+  const media = latestMessage.media;
   const hasMedia = !!media;
+
   const modelRef = hasMedia
     ? googleAI.model('gemini-2.5-pro')
     : googleAI.model('gemini-2.5-flash');
 
-  const promptParts: Part[] = [{ text: prompt }];
-  if (media) {
-    const match = media.match(/^data:(.+);base64,(.+)$/);
-    if (match) {
-      const [, mimeType, data] = match;
-      promptParts.push({
-        media: {
-          url: `data:${mimeType};base64,${data}`,
-          contentType: mimeType,
-        },
-      });
+  const historyToParts = (history: Message[]): Part[] => {
+    const parts: Part[] = [];
+    for (const message of history) {
+        if (message.role === 'user') {
+             const userParts: Part[] = [{text: message.content}];
+             if (message.media) {
+                const match = message.media.match(/^data:(.+);base64,(.+)$/);
+                if (match) {
+                    const [, mimeType, data] = match;
+                    userParts.push({
+                        media: {
+                            url: `data:${mimeType};base64,${data}`,
+                            contentType: mimeType,
+                        },
+                    });
+                }
+             }
+             parts.push(...userParts);
+        } else if (message.role === 'assistant') {
+            parts.push({text: message.content, role: 'model'});
+        }
     }
-  }
+    // Gemini API requires the last part to be a user part
+    if (parts.length > 0 && parts[parts.length -1].role === 'model') {
+        parts.push({text: ''});
+    }
+
+    return parts;
+  };
+
+  const promptParts = historyToParts(history);
 
   const { stream } = await ai.generateStream({
     model: modelRef,
@@ -88,7 +110,6 @@ export async function generateAudio(text: string) {
     },
   });
 
-  // The plugin returns an object, not an array, so no [0]
   if (!media) {
     throw new Error('Audio generation failed, no media returned.');
   }
@@ -98,4 +119,15 @@ export async function generateAudio(text: string) {
   const audioDataUri = 'data:audio/wav;base64,' + wavBase64;
 
   return { audio: audioDataUri };
+}
+
+export async function runCode(code: string, language: string): Promise<string> {
+  const systemPrompt = prompts.codeBuilder(language);
+  
+  const { text } = await ai.generate({
+    system: systemPrompt,
+    prompt: code,
+  });
+
+  return text;
 }

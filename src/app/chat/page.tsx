@@ -3,6 +3,7 @@
 import ChatInterface from '@/components/chat-interface';
 import Link from 'next/link';
 import {
+  Code,
   LogIn,
   LogOut,
   Plus,
@@ -67,6 +68,14 @@ export default function ChatPage() {
                         <SidebarMenuButton className="w-full justify-start" isActive={true}>
                         <Plus className="mr-2 h-4 w-4" />
                         New Chat
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <Link href="/code-builder" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <Code className="mr-2 h-4 w-4" />
+                        Code Builder
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
