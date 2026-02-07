@@ -95,10 +95,15 @@ export async function synapse(
 
   const readableStream = new ReadableStream({
     async start(controller) {
-      for await (const chunk of stream) {
-        controller.enqueue(chunk.text ?? '');
+      try {
+        for await (const chunk of stream) {
+          controller.enqueue(chunk.text ?? '');
+        }
+        controller.close();
+      } catch (error) {
+        console.error("Error during AI stream processing:", error);
+        controller.error(new Error(error instanceof Error ? error.message : 'An error occurred while processing the AI response.'));
       }
-      controller.close();
     },
   });
 
