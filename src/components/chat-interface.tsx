@@ -100,97 +100,93 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     setInput("");
     if (fileInputRef.current) fileInputRef.current.value = '';
     
-    startTransition(async () => {
-      let currentChatId = chatId;
-      
-      try {
-        // --- Persistence for logged-in users ---
-        if (user && firestore) {
-          // If it's a new chat, create it first
-          if (!chatId) {
-            const chatTitle = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-            const chatCollectionRef = collection(firestore, 'users', user.uid, 'chats');
-            const newChatDoc = await addDoc(chatCollectionRef, {
-              title: chatTitle,
-              userId: user.uid,
-              createdAt: serverTimestamp(),
-            });
-            currentChatId = newChatDoc.id;
-            // Add the user message to the new chat
-            await addDoc(collection(chatCollectionRef, currentChatId, 'messages'), userMessage);
-            router.replace(`/chat/${currentChatId}`, { scroll: false });
-            // The rest of the flow will be handled by the new page with the chatId
-            return; 
+    startTransition(() => {
+      (async () => {
+        let currentChatId = chatId;
+        const assistantMessageId = uuidv4();
+        
+        try {
+          // --- Persistence for logged-in users ---
+          if (user && firestore) {
+            if (!chatId) {
+              const chatTitle = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+              const chatCollectionRef = collection(firestore, 'users', user.uid, 'chats');
+              const newChatDoc = await addDoc(chatCollectionRef, {
+                title: chatTitle,
+                userId: user.uid,
+                createdAt: serverTimestamp(),
+              });
+              currentChatId = newChatDoc.id;
+              await addDoc(collection(chatCollectionRef, currentChatId, 'messages'), userMessage);
+              router.replace(`/chat/${currentChatId}`, { scroll: false });
+              return; 
+            } else {
+              await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId!, 'messages'), userMessage);
+            }
+          }
+          // --- End Persistence ---
+
+          // Prepare for AI call
+          if (!user) { // Optimistic assistant message for guests
+              setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
+          }
+
+          const profileContext = buildUserProfileContext(userProfile);
+          const systemPrompt = prompts[selectedMode](selectedLanguage, profileContext);
+          
+          const messagesForAI: AiMessage[] = newMessages.map(({ role, content, media }) => ({
+            role,
+            content,
+            ...(media && { media }),
+          }));
+          
+          const result = await invokeAI(systemPrompt, messagesForAI);
+          
+          if (result.success && result.response?.content) {
+            const reader = result.response.content.getReader();
+            let accumulatedContent = '';
+            const decoder = new TextDecoder();
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              accumulatedContent += decoder.decode(value, { stream: true });
+
+              if (!user) { // Live update for guest UI
+                setLocalMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
+                  )
+                );
+              }
+            }
+
+            const finalAssistantMessage: Message = {
+              id: assistantMessageId,
+              role: 'assistant',
+              content: accumulatedContent,
+              timestamp: serverTimestamp(),
+            };
+            if (user && firestore && currentChatId) {
+              await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
+            }
+
           } else {
-            // It's an existing chat, just add the message
-            await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId!, 'messages'), userMessage);
+            throw new Error(result.error || "An unknown error occurred.");
+          }
+        } catch (error) {
+           toast({
+            variant: "destructive",
+            title: "Error",
+            description: error instanceof Error ? error.message : String(error),
+          });
+          if (!user) {
+            // Roll back optimistic updates on failure
+            setLocalMessages(prev => prev.filter(msg => msg.id !== userMessage.id && msg.id !== assistantMessageId));
           }
         }
-        // --- End Persistence ---
-
-        // Prepare for AI call
-        const profileContext = buildUserProfileContext(userProfile);
-        const systemPrompt = prompts[selectedMode](selectedLanguage, profileContext);
-        
-        const assistantMessageId = uuidv4();
-        if (!user) { // Optimistic assistant message for guests
-            setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
-        }
-
-        // Create a serializable version of messages for the AI
-        const messagesForAI: AiMessage[] = newMessages.map(({ role, content, media }) => ({
-          role,
-          content,
-          ...(media && { media }),
-        }));
-        
-        const result = await invokeAI(systemPrompt, messagesForAI);
-        
-        if (result.success && result.response?.content) {
-          const reader = result.response.content.getReader();
-          let accumulatedContent = '';
-          const decoder = new TextDecoder();
-
-          const read = async () => {
-            const { done, value } = await reader.read();
-            if (done) {
-              const finalAssistantMessage: Message = {
-                id: assistantMessageId,
-                role: 'assistant',
-                content: accumulatedContent,
-                timestamp: serverTimestamp(),
-              };
-              if (user && firestore && currentChatId) {
-                await addDoc(collection(firestore, 'users', user.uid, 'chats', currentChatId, 'messages'), finalAssistantMessage);
-              }
-              return;
-            }
-            
-            accumulatedContent += decoder.decode(value, { stream: true });
-
-            if (!user) { // Live update for guest UI
-              setLocalMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
-                )
-              );
-            }
-            read();
-          };
-          read();
-        } else {
-          throw new Error(result.error || "An unknown error occurred.");
-        }
-      } catch (error) {
-         toast({
-          variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : String(error),
-        });
-        if (!user) {
-          setLocalMessages(prev => prev.slice(0, -2)); // remove user and assistant placeholder
-        }
-      }
+      })();
     });
   }, [isPending, messages, selectedLanguage, selectedMode, toast, user, firestore, chatId, userProfile, router]);
 
