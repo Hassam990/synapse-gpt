@@ -87,7 +87,7 @@ function CodeBuilderInterface() {
     }
 
     return (
-        <div className="flex flex-col h-full w-full p-4 gap-4">
+        <div className="flex flex-col h-full w-full gap-4">
             <header className="flex items-center justify-between p-4 border-b border-border/20 rounded-lg bg-card">
                  <h1 className="text-xl font-bold">Synapse Code Builder</h1>
                  <div className="flex items-center gap-4">
@@ -226,7 +226,7 @@ export default function CodeBuilderPage() {
                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                   <SidebarTrigger />
               </header>
-              <main className="flex-grow flex flex-col overflow-hidden">
+              <main className="flex-grow flex flex-col overflow-hidden p-4">
                 <CodeBuilderInterface />
               </main>
             </div>
