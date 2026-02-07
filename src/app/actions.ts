@@ -42,9 +42,9 @@ export async function generateAudioAction(text: string) {
   }
 }
 
-export async function executeCode(code: string, language: string) {
+export async function executeCode(code: string, language: string, stdin: string) {
     try {
-        const result = await runCodeFlow(code, language);
+        const result = await runCodeFlow(code, language, stdin);
         return { success: true, response: result };
     } catch (error) {
         console.error("Code execution failed:", error);

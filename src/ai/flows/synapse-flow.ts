@@ -121,12 +121,20 @@ export async function generateAudio(text: string) {
   return { audio: audioDataUri };
 }
 
-export async function runCode(code: string, language: string): Promise<string> {
+export async function runCode(code: string, language: string, stdin: string): Promise<string> {
   const systemPrompt = prompts.codeBuilder(language);
   
+  const userPrompt = `Code:
+${code}
+
+---
+Stdin:
+${stdin || ''}
+`;
+
   const { text } = await ai.generate({
     system: systemPrompt,
-    prompt: code,
+    prompt: userPrompt,
   });
 
   return text;

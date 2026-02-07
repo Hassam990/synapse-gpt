@@ -44,6 +44,7 @@ function CodeBuilderInterface() {
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
     const [output, setOutput] = useState('');
+    const [stdin, setStdin] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
 
@@ -59,7 +60,7 @@ function CodeBuilderInterface() {
         setIsLoading(true);
         setOutput('');
         try {
-            const result = await executeCode(code, language);
+            const result = await executeCode(code, language, stdin);
             if (result.success && result.response) {
                 setOutput(result.response);
             } else {
@@ -79,10 +80,10 @@ function CodeBuilderInterface() {
     };
 
     const placeholderCode: { [key: string]: string } = {
-        python: 'print("Hello from Python!")',
+        python: 'name = input("What is your name? ")\nprint(f"Hello, {name}!")',
         javascript: 'console.log("Hello from JavaScript!");',
-        cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++!";\n    return 0;\n}',
-        c: '#include <stdio.h>\n\nint main() {\n   printf("Hello from C!");\n   return 0;\n}',
+        cpp: '#include <iostream>\n#include <string>\n\nint main() {\n    std::string name;\n    std::cout << "What is your name? ";\n    std::getline(std::cin, name);\n    std::cout << "Hello, " << name << "!" << std::endl;\n    return 0;\n}',
+        c: '#include <stdio.h>\n\nint main() {\n   char name[50];\n   printf("What is your name? ");\n   fgets(name, sizeof(name), stdin);\n   printf("Hello, %s", name);\n   return 0;\n}',
     }
 
     return (
@@ -118,10 +119,22 @@ function CodeBuilderInterface() {
                         rows={20}
                     />
                 </div>
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-lg font-semibold">Output Terminal</h2>
-                    <div className="flex-grow bg-black rounded-lg p-4 font-mono text-white text-sm overflow-auto">
-                        <pre>{isLoading ? 'Executing code...' : output || '// Output will be shown here'}</pre>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2 flex-grow">
+                        <h2 className="text-lg font-semibold">Output Terminal</h2>
+                        <div className="flex-grow bg-black rounded-lg p-4 font-mono text-white text-sm overflow-auto">
+                            <pre>{isLoading ? 'Executing code...' : output || '// Output will be shown here'}</pre>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <h2 className="text-lg font-semibold">Standard Input (stdin)</h2>
+                        <Textarea
+                            value={stdin}
+                            onChange={(e) => setStdin(e.target.value)}
+                            placeholder="Provide input for your program here, one line per input."
+                            className="font-mono bg-card border-border/20 text-base"
+                            rows={5}
+                        />
                     </div>
                 </div>
             </div>
@@ -213,7 +226,7 @@ export default function CodeBuilderPage() {
                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
                   <SidebarTrigger />
               </header>
-              <main className="flex-grow flex flex-col p-1 sm:p-4 overflow-hidden">
+              <main className="flex-grow flex flex-col overflow-hidden">
                 <CodeBuilderInterface />
               </main>
             </div>
