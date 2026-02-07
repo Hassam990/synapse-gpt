@@ -49,10 +49,11 @@ export async function synapse(
     return messages.map((message) => {
       const contentParts: (TextPart | MediaPart)[] = [];
       
-      if (message.content || !message.media) {
-          contentParts.push({ text: message.content });
-      }
+      // Always add a text part, even if it's an empty string.
+      // This is crucial for multipart messages (like images) where the text might be empty.
+      contentParts.push({ text: message.content || '' });
 
+      // If media exists, parse it and add it as a media part.
       if (message.media) {
         const match = message.media.match(/^data:(.+);base64,(.+)$/);
         if (match) {
@@ -66,11 +67,10 @@ export async function synapse(
         }
       }
       
-      if (message.role === 'user') {
-        return { role: 'user', parts: contentParts };
-      } else { 
-        return { role: 'model', parts: contentParts };
-      }
+      return {
+        role: message.role === 'user' ? 'user' : 'model',
+        parts: contentParts,
+      };
     });
   };
 
