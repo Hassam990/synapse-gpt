@@ -192,12 +192,12 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         const newUrl = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
        }
-    } else if (isChatEmpty && !isLoadingMessages) {
+    } else if (!chatId && isChatEmpty && !isLoadingMessages) {
         setLocalMessages([
           { id: uuidv4(), role: "assistant", content: welcomeMessage },
         ]);
     }
-  }, [initialPrompt, handleSendMessage, messages.length, isLoadingMessages]);
+  }, [initialPrompt, handleSendMessage, messages.length, isLoadingMessages, chatId]);
   
   // Effect to scroll to bottom on new messages
   useEffect(() => {

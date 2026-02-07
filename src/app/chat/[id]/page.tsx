@@ -149,9 +149,7 @@ export default function ChatWithIdPage({ params }: { params: { id: string }}) {
                 <SidebarTrigger />
             </header>
             <main className="flex-grow flex flex-col p-1 sm:p-4 overflow-hidden">
-              <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-                <ChatWithIdPageContent chatId={params.id} />
-              </Suspense>
+              <ChatWithIdPageContent chatId={params.id} />
             </main>
           </div>
         </SidebarInset>
