@@ -1,7 +1,8 @@
+
 'use server';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import type { Part, TextPart, MediaPart } from 'genkit';
+import { Message as GenkitMessage, TextPart, MediaPart } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
 import type { AiMessage } from '@/app/actions';
@@ -33,44 +34,54 @@ export async function synapse(
   systemPrompt: string,
   history: AiMessage[]
 ) {
+  if (history.length === 0) {
+    throw new Error("Cannot invoke AI with an empty message history.");
+  }
+
   const latestMessage = history[history.length - 1];
-  const media = latestMessage?.media;
-  const hasMedia = !!media;
+  const hasMedia = !!latestMessage?.media;
 
   const modelRef = hasMedia
     ? googleAI.model('gemini-2.5-pro')
     : googleAI.model('gemini-2.5-flash');
 
-  const historyToParts = (history: AiMessage[]): Part[] => {
-    const parts: Part[] = [];
-    for (const message of history) {
-      if (message.role === 'user') {
-        const userContentParts: (TextPart | MediaPart)[] = [{ text: message.content }];
-        if (message.media) {
-          const match = message.media.match(/^data:(.+);base64,(.+)$/);
-          if (match) {
-            const [, mimeType] = match;
-            userContentParts.push({
-              media: {
-                url: message.media,
-                contentType: mimeType,
-              },
-            });
-          }
-        }
-        parts.push({ role: 'user', parts: userContentParts });
-      } else if (message.role === 'assistant') {
-        parts.push({ role: 'model', parts: [{ text: message.content }] });
+  const toGenkitMessages = (messages: AiMessage[]): GenkitMessage[] => {
+    return messages.map((message) => {
+      const contentParts: (TextPart | MediaPart)[] = [];
+      
+      if (message.content || !message.media) {
+          contentParts.push({ text: message.content });
       }
-    }
-    return parts;
+
+      if (message.media) {
+        const match = message.media.match(/^data:(.+);base64,(.+)$/);
+        if (match) {
+          const [, mimeType] = match;
+          contentParts.push({
+            media: {
+              url: message.media,
+              contentType: mimeType,
+            },
+          });
+        }
+      }
+      
+      if (message.role === 'user') {
+        return { role: 'user', parts: contentParts };
+      } else { 
+        return { role: 'model', parts: contentParts };
+      }
+    });
   };
 
-  const promptParts = historyToParts(history);
+  const genkitMessages = toGenkitMessages(history);
+  const modelHistory = genkitMessages.slice(0, -1);
+  const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
 
   const { stream } = await ai.generateStream({
     model: modelRef,
-    prompt: promptParts,
+    prompt: lastMessageParts,
+    history: modelHistory,
     config: {
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
