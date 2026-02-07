@@ -17,8 +17,15 @@ export interface Message {
     timestamp?: any;
 }
 
+// New type for serializable messages passed to the AI
+export interface AiMessage {
+    role: "user" | "assistant";
+    content: string;
+    media?: string;
+}
 
-export async function invokeAI(systemPrompt: string, messages: Message[]) {
+
+export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
   try {
     const result = await synapse(systemPrompt, messages);
     return { success: true, response: result };

@@ -4,7 +4,7 @@ import { googleAI } from '@genkit-ai/google-genai';
 import type { Part } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
-import type { Message } from '@/app/actions';
+import type { AiMessage } from '@/app/actions';
 
 async function toWav(
   pcmData: Buffer,
@@ -31,17 +31,17 @@ async function toWav(
 
 export async function synapse(
   systemPrompt: string,
-  history: Message[]
+  history: AiMessage[]
 ) {
   const latestMessage = history[history.length - 1];
-  const media = latestMessage.media;
+  const media = latestMessage?.media;
   const hasMedia = !!media;
 
   const modelRef = hasMedia
     ? googleAI.model('gemini-2.5-pro')
     : googleAI.model('gemini-2.5-flash');
 
-  const historyToParts = (history: Message[]): Part[] => {
+  const historyToParts = (history: AiMessage[]): Part[] => {
     const parts: Part[] = [];
     for (const message of history) {
         if (message.role === 'user') {

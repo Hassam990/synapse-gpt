@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AiMode, invokeAI, Message, generateAudioAction } from "@/app/actions";
+import { AiMode, invokeAI, Message, generateAudioAction, AiMessage } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -137,7 +137,14 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
             setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
         }
 
-        const result = await invokeAI(systemPrompt, newMessages);
+        // Create a serializable version of messages for the AI
+        const messagesForAI: AiMessage[] = newMessages.map(({ role, content, media }) => ({
+          role,
+          content,
+          ...(media && { media }),
+        }));
+        
+        const result = await invokeAI(systemPrompt, messagesForAI);
         
         if (result.success && result.response?.content) {
           const reader = result.response.content.getReader();
