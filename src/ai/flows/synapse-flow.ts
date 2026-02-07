@@ -1,7 +1,7 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import type { Part } from 'genkit';
+import type { Part, TextPart, MediaPart } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
 import type { AiMessage } from '@/app/actions';
@@ -45,12 +45,12 @@ export async function synapse(
     const parts: Part[] = [];
     for (const message of history) {
         if (message.role === 'user') {
-             const userParts: Part[] = [{text: message.content}];
+             const userContentParts: (TextPart | MediaPart)[] = [{text: message.content}];
              if (message.media) {
                 const match = message.media.match(/^data:(.+);base64,(.+)$/);
                 if (match) {
                     const [, mimeType, data] = match;
-                    userParts.push({
+                    userContentParts.push({
                         media: {
                             url: `data:${mimeType};base64,${data}`,
                             contentType: mimeType,
@@ -58,16 +58,11 @@ export async function synapse(
                     });
                 }
              }
-             parts.push(...userParts);
+             parts.push(...userContentParts);
         } else if (message.role === 'assistant') {
-            parts.push({text: message.content, role: 'model'});
+            parts.push({ role: 'model', parts: [{ text: message.content }] });
         }
     }
-    // Gemini API requires the last part to be a user part
-    if (parts.length > 0 && parts[parts.length -1].role === 'model') {
-        parts.push({text: ''});
-    }
-
     return parts;
   };
 
