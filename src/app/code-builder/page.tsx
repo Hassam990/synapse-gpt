@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -95,13 +96,16 @@ function CodeBuilderInterface() {
         }
         setIsGenerating(true);
         setCode('');
+        setStdin('');
         try {
             const result = await generateCode(aiPrompt, language);
             if (result.success && result.response) {
-                setCode(result.response);
+                const { code: generatedCode, stdin: generatedStdin } = result.response as { code: string; stdin: string };
+                setCode(generatedCode);
+                setStdin(generatedStdin);
                 toast({
                     title: 'Code Generated',
-                    description: 'The AI has generated the code in the editor.',
+                    description: 'The AI has generated the code and sample input for you.',
                 });
             } else {
                 throw new Error(result.error || 'Failed to generate code.');

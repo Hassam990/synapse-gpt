@@ -152,7 +152,7 @@ ${stdin || ''}
 }
 
 
-export async function generateCodeFromPrompt(prompt: string, language: string): Promise<string> {
+export async function generateCodeFromPrompt(prompt: string, language: string): Promise<{ code: string; stdin: string; }> {
   const systemPrompt = prompts.codeGenerator(language);
 
   const { text } = await ai.generate({
@@ -161,5 +161,17 @@ export async function generateCodeFromPrompt(prompt: string, language: string): 
     prompt: prompt,
   });
 
-  return text;
+  try {
+    // The AI might return the JSON inside a markdown block. Clean it up.
+    const cleanedJson = text.replace(/```json\n?/g, '').replace(/```/g, '');
+    const result = JSON.parse(cleanedJson);
+    return {
+        code: result.code || '',
+        stdin: result.stdin || ''
+    };
+  } catch (e) {
+    console.error("Failed to parse AI response for code generation. Falling back to raw text.", e);
+    // Fallback: if the AI just returned raw code, use that.
+    return { code: text, stdin: '' };
+  }
 }

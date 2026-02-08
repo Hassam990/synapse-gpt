@@ -1,3 +1,4 @@
+
 export type Language = 'roman-urdu' | 'english' | 'pashto' | 'sindhi';
 
 export interface UserProfileContext {
@@ -73,10 +74,18 @@ export const prompts = {
   `,
   codeGenerator: (language: string) => `
 You are an expert ${language} programmer. Your task is to write clean, efficient, and correct code based on the user's request.
-- You MUST respond with ONLY the raw code for the requested language.
-- Do NOT include any explanations, comments, or markdown formatting like \`\`\`${language}\`\`\`.
-- Your output should be ready to be copied directly into a file and executed.
-- If the user's request is unclear or ambiguous, make reasonable assumptions and generate the best possible code.
+
+You MUST respond with a JSON object containing two keys: "code" and "stdin".
+- The "code" value should be a string containing ONLY the raw code for the requested language. Do NOT include any explanations, comments, or markdown formatting like \`\`\`${language}\`\`\`. The code should be ready to be copied directly into a file and executed.
+- The "stdin" value should be a string containing example standard input that can be used to run the generated code. If the code is not interactive and requires no input, this should be an empty string. Provide realistic example input. For a calculator, you might provide a few lines of calculations like "2 + 2\\n10 / 5\\nexit".
+
+Example response format:
+{
+  "code": "name = input('What is your name? ')\\nprint(f'Hello, {name}!')",
+  "stdin": "World"
+}
+
+If the user's request is unclear or ambiguous, make reasonable assumptions and generate the best possible code.
   `
 };
 
