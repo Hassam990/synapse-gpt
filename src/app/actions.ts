@@ -24,21 +24,16 @@ export interface AiMessage {
     media?: string;
 }
 
-
 export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
   try {
-    // The synapse function returns an object { content: ReadableStream }
-    const result = await synapse(systemPrompt, messages);
-    // We return the stream directly. This is the correct way to handle streaming
-    // responses from server actions.
-    return result.content;
+    // The synapse function now returns a ReadableStream directly on success.
+    const stream = await synapse(systemPrompt, messages);
+    return stream;
   } catch (error) {
-    console.error("AI invocation failed:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred.";
-    
-    // Instead of throwing, return a stream that immediately errors.
-    // This avoids Next.js server action's error serialization issues with thrown errors.
+    console.error("AI invocation failed on the server:", error);
+    // This is a critical failure. Instead of throwing, we create a stream
+    // that immediately communicates the error to the client.
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during AI processing.";
     return new ReadableStream({
       start(controller) {
         controller.error(new Error(errorMessage));
@@ -47,6 +42,7 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
     });
   }
 }
+
 
 export async function generateAudioAction(text: string) {
   try {
@@ -72,7 +68,7 @@ export async function executeCode(code: string, language: string, stdin: string)
     }
 }
 
-export async function generateCode(prompt: string, language: string) {
+export async function generateCode(prompt: string, language: string): Promise<{ success: boolean; response?: { code: string; stdin: string; }; error?: string; }> {
     try {
         const result = await generateCodeFromPrompt(prompt, language);
         return { success: true, response: result };

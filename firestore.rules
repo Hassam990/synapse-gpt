@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -34,8 +35,10 @@ service cloud.firestore {
         // Allow owner to read and create messages.
         allow list, get, create: if isOwner(userId);
         
-        // Allow owner to update messages (e.g., to add an audio URL).
+        // Allow owner to update any field on their own messages (e.g., to add an audio URL).
         allow update: if isOwner(userId);
+
+        // Disallow deleting messages to preserve chat history.
         allow delete: if false;
       }
     }

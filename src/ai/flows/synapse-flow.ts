@@ -2,7 +2,7 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { Message as GenkitMessage, TextPart, MediaPart } from 'genkit';
+import { Message as GenkitMessage, part, Part } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
 import type { AiMessage } from '@/app/actions';
@@ -33,7 +33,7 @@ async function toWav(
 export async function synapse(
   systemPrompt: string,
   history: AiMessage[]
-) {
+): Promise<ReadableStream<any>> {
   if (history.length === 0) {
     throw new Error("Cannot invoke AI with an empty message history.");
   }
@@ -47,29 +47,18 @@ export async function synapse(
 
   const toGenkitMessages = (messages: AiMessage[]): GenkitMessage[] => {
     return messages.map((message) => {
-      const contentParts: (TextPart | MediaPart)[] = [];
+      const parts: Part[] = [];
       
-      // Always add a text part, even if it's an empty string.
-      // This is crucial for multipart messages (like images) where the text might be empty.
-      contentParts.push({ text: message.content || '' });
+      // Genkit requires a text part, even if it's empty for media messages.
+      parts.push(part.text(message.content || ''));
 
-      // If media exists, parse it and add it as a media part.
       if (message.media) {
-        const match = message.media.match(/^data:(.+);base64,(.+)$/);
-        if (match) {
-          const [, mimeType] = match;
-          contentParts.push({
-            media: {
-              url: message.media,
-              contentType: mimeType,
-            },
-          });
-        }
+          parts.push(part.media(message.media));
       }
       
       return {
         role: message.role === 'user' ? 'user' : 'model',
-        parts: contentParts,
+        parts: parts,
       };
     });
   };
@@ -78,36 +67,46 @@ export async function synapse(
   const modelHistory = genkitMessages.slice(0, -1);
   const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
 
-  const { stream } = await ai.generateStream({
-    model: modelRef,
-    prompt: lastMessageParts,
-    history: modelHistory,
-    config: {
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      ],
-    },
-    system: systemPrompt,
-  });
+  try {
+    const { stream } = await ai.generateStream({
+      model: modelRef,
+      prompt: lastMessageParts,
+      history: modelHistory,
+      config: {
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        ],
+      },
+      system: systemPrompt,
+    });
 
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const chunk of stream) {
-          controller.enqueue(chunk.text ?? '');
+    // Return a new ReadableStream that processes the AI's output stream
+    return new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.text;
+            if (text) {
+              controller.enqueue(new TextEncoder().encode(text));
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Error during AI stream processing:", error);
+          const errorMessage = error instanceof Error ? error.message : 'An error occurred while processing the AI response.';
+          controller.error(new Error(errorMessage));
         }
-        controller.close();
-      } catch (error) {
-        console.error("Error during AI stream processing:", error);
-        controller.error(new Error(error instanceof Error ? error.message : 'An error occurred while processing the AI response.'));
-      }
-    },
-  });
+      },
+    });
 
-  return { content: readableStream };
+  } catch(e) {
+    // If ai.generateStream itself fails, re-throw the error to be caught by the server action.
+    console.error("Failed to start AI stream generation:", e);
+    throw e;
+  }
 }
 
 export async function generateAudio(text: string) {

@@ -81,9 +81,13 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         (async () => {
             const assistantMessageId = uuidv4();
             try {
-                // For guests, add a placeholder assistant message to local state
-                if (!user) {
-                    setLocalMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
+                // Add a placeholder for the assistant's response
+                const placeholderAssistantMessage: Message = { id: assistantMessageId, role: 'assistant', content: '' };
+                if (user && firestore && chatId) {
+                    // For logged-in users, we will add and then update the document.
+                    // This is optimistic but might need a more robust implementation if this ID is not the final doc ID.
+                } else {
+                    setLocalMessages(prev => [...prev, placeholderAssistantMessage]);
                 }
                 
                 const profileContext = buildUserProfileContext(userProfile);
@@ -118,7 +122,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 }
 
                 const finalAssistantMessage: Message = {
-                    id: assistantMessageId,
+                    id: assistantMessageId, // Re-using ID for simplicity
                     role: 'assistant',
                     content: accumulatedContent,
                     timestamp: serverTimestamp(),
@@ -127,17 +131,20 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 // Persist final AI message for logged-in users
                 if (user && firestore && chatId) {
                     await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), finalAssistantMessage);
-                    // Also update the last message timestamp on the chat document itself
                     await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
+                } else {
+                    // Final update for guest user, replacing placeholder
+                    setLocalMessages(prev => prev.map(msg => msg.id === assistantMessageId ? finalAssistantMessage : msg));
                 }
 
             } catch (error) {
-                toast({
+                 const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+                 toast({
                     variant: "destructive",
-                    title: "Error",
-                    description: error instanceof Error ? error.message : String(error),
+                    title: "Error from AI",
+                    description: errorMessage,
                 });
-                // Clean up placeholder on error for guests
+                // Clean up placeholder on error
                 if (!user) {
                     setLocalMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
                 }
@@ -173,6 +180,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
             });
             const newChatId = newChatDoc.id;
             await addDoc(collection(chatCollectionRef, newChatId, 'messages'), userMessage);
+            // Redirect to the new chat page. The `useEffect` will trigger the AI response.
             router.replace(`/chat/${newChatId}`, { scroll: false });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error creating chat', description: error instanceof Error ? error.message : String(error) });
@@ -195,16 +203,17 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
 
   // Effect to handle initial prompt from homepage
   useEffect(() => {
-    const isChatEmpty = messages.length === 0;
+    const isChatEmpty = messages.length === 0 || (messages.length === 1 && messages[0].content === welcomeMessage);
     if (initialPrompt && !promptHandled.current && isChatEmpty) {
       handleSendMessage(initialPrompt);
       promptHandled.current = true;
+       // Clean the URL
        if (typeof window !== 'undefined') {
         const newUrl = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
        }
     }
-  }, [initialPrompt, handleSendMessage, messages.length]);
+  }, [initialPrompt, handleSendMessage, messages]);
 
   // Effect to set initial welcome message for guests or new chats
   useEffect(() => {
@@ -218,23 +227,21 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   // Effect to trigger AI response when a new user message is added
   useEffect(() => {
     if (!isPending && messages.length > 0 && messages[messages.length - 1].role === 'user') {
-      // Don't trigger for the welcome message placeholder case
-      if (messages.length === 1 && messages[0].content === welcomeMessage) {
-        return;
-      }
       triggerAIResponse(messages);
     }
   }, [messages, isPending, triggerAIResponse]);
   
   // Effect to scroll to bottom on new messages
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [messages]);
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTo({
+          top: scrollAreaRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 100);
+  }, [messages, isPending]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -254,14 +261,10 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
       const result = await generateAudioAction(text);
       if (result.success && result.response?.audio) {
         if(user && firestore && chatId) {
-            // Firestore message documents don't have a stable client-side ID to find them by.
-            // This part of the logic is complex and might require fetching the document by another field if ID is not the doc ID.
-            // For now, we assume the message.id is the firestore document id, which may be incorrect.
-            // A more robust solution might involve updating the local state and letting firestore sync,
-            // but that adds complexity. This is a simplification.
-            const docRef = doc(firestore, 'users', user.uid, 'chats', chatId, 'messages', messageId)
-            // A simple getDoc first to see if it exists with that ID could prevent errors.
-            await updateDoc(docRef, { audio: result.response.audio });
+            // Find the correct document to update. This assumes messageId is the Firestore document ID.
+            // This is a simplification; a more robust solution might require querying.
+            const messageRef = doc(firestore, 'users', user.uid, 'chats', chatId, 'messages', messageId);
+            await updateDoc(messageRef, { audio: result.response.audio });
 
         } else {
              const newMessages = messages.map(msg => 
@@ -296,7 +299,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     <div className="w-full h-full flex flex-col bg-background">
       <header className="p-4 border-b border-border/20 flex flex-col sm:flex-row justify-center items-center gap-4">
         <Select
-          defaultValue="conversation"
+          value={selectedMode}
           onValueChange={(value) => setSelectedMode(value as AiMode)}
         >
           <SelectTrigger className="w-full sm:w-[280px] bg-secondary border-border/50">
@@ -310,7 +313,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
           </SelectContent>
         </Select>
          <Select
-          defaultValue="roman-urdu"
+          value={selectedLanguage}
           onValueChange={(value) => setSelectedLanguage(value as Language)}
         >
           <SelectTrigger className="w-full sm:w-[180px] bg-secondary border-border/50">
@@ -333,9 +336,9 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                     <Loader className="h-6 w-6 animate-spin" />
                  </div>
             )}
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
-                key={message.id}
+                key={message.id || index}
                 className={cn("flex items-start gap-3 animate-message-in",
                   message.role === "user" ? "justify-end" : ""
                 )}
@@ -387,7 +390,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 )}
               </div>
             ))}
-             {isPending && messages[messages.length - 1]?.role === 'user' && (
+             {isPending && (
               <div className="flex items-start gap-3 animate-message-in">
                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
                     <Bot className="h-5 w-5 text-primary-foreground" />
@@ -448,5 +451,3 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     </div>
   );
 }
-
-    

@@ -42,7 +42,9 @@ import Image from 'next/image';
 import { executeCode, generateCode } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithGoogle } from '@/firebase/auth-actions';
-import { Separator } from '@/components/ui/separator';
+import RecentChats from '@/components/recent-chats';
+import { Suspense } from 'react';
+
 
 function CodeBuilderInterface() {
     const [code, setCode] = useState('');
@@ -100,7 +102,7 @@ function CodeBuilderInterface() {
         try {
             const result = await generateCode(aiPrompt, language);
             if (result.success && result.response) {
-                const { code: generatedCode, stdin: generatedStdin } = result.response as { code: string; stdin: string };
+                const { code: generatedCode, stdin: generatedStdin } = result.response;
                 setCode(generatedCode);
                 setStdin(generatedStdin);
                 toast({
@@ -265,6 +267,7 @@ export default function CodeBuilderPage() {
                     </Link>
                 </SidebarMenuItem>
               </SidebarMenu>
+               <Suspense fallback={null}><RecentChats /></Suspense>
             </SidebarContent>
             <SidebarFooter>
               <div className="flex items-center justify-between p-2">
