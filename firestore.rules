@@ -34,8 +34,9 @@ service cloud.firestore {
         // Allow owner to read and create messages.
         allow list, get, create: if isOwner(userId);
         
-        // Messages are immutable once created.
-        allow update, delete: if false;
+        // Allow owner to update messages (e.g., to add an audio URL).
+        allow update: if isOwner(userId);
+        allow delete: if false;
       }
     }
   }

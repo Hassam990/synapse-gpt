@@ -23,6 +23,7 @@ import {
   LogOut,
   Play,
   Plus,
+  Sparkles,
   User,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,9 +39,10 @@ import { signInAsGuest } from '@/firebase/non-blocking-login';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { executeCode } from '@/app/actions';
+import { executeCode, generateCode } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithGoogle } from '@/firebase/auth-actions';
+import { Separator } from '@/components/ui/separator';
 
 function CodeBuilderInterface() {
     const [code, setCode] = useState('');
@@ -48,6 +50,8 @@ function CodeBuilderInterface() {
     const [output, setOutput] = useState('');
     const [stdin, setStdin] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
     const { toast } = useToast();
 
     const handleRunCode = async () => {
@@ -63,7 +67,7 @@ function CodeBuilderInterface() {
         setOutput('');
         try {
             const result = await executeCode(code, language, stdin);
-            if (result.success && result.response) {
+            if (result.success && typeof result.response === 'string') {
                 setOutput(result.response);
             } else {
                 throw new Error(result.error || 'Failed to execute code.');
@@ -80,6 +84,41 @@ function CodeBuilderInterface() {
             setIsLoading(false);
         }
     };
+
+    const handleGenerateCode = async () => {
+        if (!aiPrompt.trim()) {
+            toast({
+                variant: 'destructive',
+                title: 'Prompt is empty',
+                description: 'Please describe the code you want to generate.',
+            });
+            return;
+        }
+        setIsGenerating(true);
+        setCode('');
+        try {
+            const result = await generateCode(aiPrompt, language);
+            if (result.success && result.response) {
+                setCode(result.response);
+                toast({
+                    title: 'Code Generated',
+                    description: 'The AI has generated the code in the editor.',
+                });
+            } else {
+                throw new Error(result.error || 'Failed to generate code.');
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({
+                variant: "destructive",
+                title: "Error generating code",
+                description: errorMessage,
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
 
     const placeholderCode: { [key: string]: string } = {
         python: 'name = input("What is your name? ")\nprint(f"Hello, {name}!")',
@@ -104,15 +143,32 @@ function CodeBuilderInterface() {
                             <SelectItem value="c">C</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button onClick={handleRunCode} disabled={isLoading} className="w-full sm:w-auto">
-                        <Play className="mr-2 h-4 w-4" />
-                        {isLoading ? 'Running...' : 'Run'}
-                    </Button>
                  </div>
             </header>
+            
+            <div className="flex flex-col gap-3 p-4 border border-border/30 rounded-lg bg-secondary/30">
+                <h2 className="text-lg font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/>AI Code Generator</h2>
+                <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder={`Describe what you want to build in ${language}... e.g., "A function that returns the nth fibonacci number"`}
+                    className="font-mono bg-card border-border/20 text-base"
+                    rows={3}
+                />
+                <Button onClick={handleGenerateCode} disabled={isGenerating} className="w-full sm:w-auto self-end">
+                    {isGenerating ? 'Generating...' : 'Generate Code'}
+                </Button>
+            </div>
+
             <div className="flex flex-col lg:flex-row gap-4 flex-grow min-h-0">
-                <div className="flex flex-col gap-2 h-1/2 lg:h-full lg:w-1/2">
-                    <h2 className="text-lg font-semibold">Code Editor</h2>
+                <div className="flex flex-col gap-2 h-1/2 lg:h-full lg:w-2/3">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-lg font-semibold">Code Editor</h2>
+                        <Button onClick={handleRunCode} disabled={isLoading}>
+                            <Play className="mr-2 h-4 w-4" />
+                            {isLoading ? 'Running...' : 'Run'}
+                        </Button>
+                    </div>
                     <div className="flex-grow min-h-0">
                       <Textarea 
                           value={code}
@@ -122,7 +178,7 @@ function CodeBuilderInterface() {
                       />
                     </div>
                 </div>
-                <div className="flex flex-col gap-4 h-1/2 lg:h-full lg:w-1/2">
+                <div className="flex flex-col gap-4 h-1/2 lg:h-full lg:w-1/3">
                     <div className="flex flex-col gap-2 flex-grow min-h-0">
                         <h2 className="text-lg font-semibold">Output Terminal</h2>
                         <div className="flex-grow bg-black rounded-lg p-4 font-mono text-white text-sm overflow-auto">

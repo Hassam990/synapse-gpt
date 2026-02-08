@@ -132,7 +132,7 @@ export async function generateAudio(text: string) {
   return { audio: audioDataUri };
 }
 
-export async function runCode(code: string, language: string, stdin: string): Promise<string> {
+export async function executeCodeInSandbox(code: string, language: string, stdin: string): Promise<string> {
   const systemPrompt = prompts.codeBuilder(language);
   
   const userPrompt = `Code:
@@ -146,6 +146,19 @@ ${stdin || ''}
   const { text } = await ai.generate({
     system: systemPrompt,
     prompt: userPrompt,
+  });
+
+  return text;
+}
+
+
+export async function generateCodeFromPrompt(prompt: string, language: string): Promise<string> {
+  const systemPrompt = prompts.codeGenerator(language);
+
+  const { text } = await ai.generate({
+    model: googleAI.model('gemini-2.5-pro'),
+    system: systemPrompt,
+    prompt: prompt,
   });
 
   return text;

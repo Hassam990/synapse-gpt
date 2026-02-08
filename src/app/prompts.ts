@@ -70,6 +70,13 @@ export const prompts = {
   codeBuilder: (language: string) => `
     ${codeExecutorInstructions}
     You are now acting as a ${language} interpreter.
+  `,
+  codeGenerator: (language: string) => `
+You are an expert ${language} programmer. Your task is to write clean, efficient, and correct code based on the user's request.
+- You MUST respond with ONLY the raw code for the requested language.
+- Do NOT include any explanations, comments, or markdown formatting like \`\`\`${language}\`\`\`.
+- Your output should be ready to be copied directly into a file and executed.
+- If the user's request is unclear or ambiguous, make reasonable assumptions and generate the best possible code.
   `
 };
 

@@ -1,7 +1,7 @@
 
 "use server";
 
-import { synapse, generateAudio, runCode as runCodeFlow } from "@/ai/flows/synapse-flow";
+import { synapse, generateAudio, executeCodeInSandbox, generateCodeFromPrompt } from "@/ai/flows/synapse-flow";
 export type AiMode =
   | "conversation"
   | "assistance"
@@ -56,10 +56,22 @@ export async function generateAudioAction(text: string) {
 
 export async function executeCode(code: string, language: string, stdin: string) {
     try {
-        const result = await runCodeFlow(code, language, stdin);
+        const result = await executeCodeInSandbox(code, language, stdin);
         return { success: true, response: result };
     } catch (error) {
         console.error("Code execution failed:", error);
+        const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function generateCode(prompt: string, language: string) {
+    try {
+        const result = await generateCodeFromPrompt(prompt, language);
+        return { success: true, response: result };
+    } catch (error) {
+        console.error("Code generation failed:", error);
         const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
