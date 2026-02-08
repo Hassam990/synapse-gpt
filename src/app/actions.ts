@@ -34,11 +34,17 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
     return result.content;
   } catch (error) {
     console.error("AI invocation failed:", error);
-    // When an error occurs, we throw it so the client's catch block can handle it.
-    // We wrap it in a new Error to ensure it's a plain, serializable object.
-    throw new Error(
-      error instanceof Error ? error.message : "An unknown error occurred."
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown error occurred.";
+    
+    // Instead of throwing, return a stream that immediately errors.
+    // This avoids Next.js server action's error serialization issues with thrown errors.
+    return new ReadableStream({
+      start(controller) {
+        controller.error(new Error(errorMessage));
+        controller.close();
+      },
+    });
   }
 }
 
