@@ -142,31 +142,40 @@ Stdin:
 ${stdin || ''}
 `;
 
-  const { text } = await ai.generate({
+  const result = await ai.generate({
     system: systemPrompt,
     prompt: userPrompt,
   });
 
-  return text;
+  if (!result) {
+      throw new Error("AI generation failed for code execution. Check API key and server logs.");
+  }
+
+  return result.text;
 }
 
 
 export async function generateCodeFromPrompt(prompt: string, language: string): Promise<{ code: string; stdin: string; }> {
   const systemPrompt = prompts.codeGenerator(language);
 
-  const { text } = await ai.generate({
+  const result = await ai.generate({
     model: googleAI.model('gemini-2.5-pro'),
     system: systemPrompt,
     prompt: prompt,
   });
 
+  if (!result) {
+      throw new Error("AI generation failed for code generation. Check API key and server logs.");
+  }
+  const text = result.text;
+
   try {
     // The AI might return the JSON inside a markdown block. Clean it up.
     const cleanedJson = text.replace(/```json\n?/g, '').replace(/```/g, '');
-    const result = JSON.parse(cleanedJson);
+    const parsedResult = JSON.parse(cleanedJson);
     return {
-        code: result.code || '',
-        stdin: result.stdin || ''
+        code: parsedResult.code || '',
+        stdin: parsedResult.stdin || ''
     };
   } catch (e) {
     console.error("Failed to parse AI response for code generation. Falling back to raw text.", e);

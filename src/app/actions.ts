@@ -60,7 +60,7 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]): Pro
     const modelHistory = genkitMessages.slice(0, -1);
     const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
     
-    const { text } = await ai.generate({
+    const result = await ai.generate({
       model: modelRef,
       prompt: lastMessageParts,
       history: modelHistory,
@@ -74,8 +74,12 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]): Pro
       },
       system: systemPrompt,
     });
+
+    if (!result) {
+      throw new Error("AI generation failed. This might be due to a missing API key or a network issue.");
+    }
     
-    return { success: true, response: text };
+    return { success: true, response: result.text };
 
   } catch (error) {
     console.error("AI invocation failed on the server:", error);
