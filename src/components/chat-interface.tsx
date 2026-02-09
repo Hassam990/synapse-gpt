@@ -79,15 +79,13 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
 
     startTransition(() => {
         (async () => {
-            const assistantMessageId = uuidv4();
+            const guestAssistantMessageId = user ? null : uuidv4();
+            
             try {
-                // Add a placeholder for the assistant's response
-                const placeholderAssistantMessage: Message = { id: assistantMessageId, role: 'assistant', content: '' };
-                if (user && firestore && chatId) {
-                    // For logged-in users, we will add and then update the document.
-                    // This is optimistic but might need a more robust implementation if this ID is not the final doc ID.
-                } else {
-                    setLocalMessages(prev => [...prev, placeholderAssistantMessage]);
+                // For guests, add a placeholder while we wait for the AI response.
+                if (guestAssistantMessageId) {
+                    const placeholder: Message = { id: guestAssistantMessageId, role: 'assistant', content: '' };
+                    setLocalMessages(prev => [...prev, placeholder]);
                 }
                 
                 const profileContext = buildUserProfileContext(userProfile);
@@ -99,55 +97,35 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                     ...(media && { media }),
                 }));
                 
-                const stream = await invokeAI(systemPrompt, messagesForAI);
+                const result = await invokeAI(systemPrompt, messagesForAI);
                 
-                let accumulatedContent = '';
-                const decoder = new TextDecoder();
-                const reader = stream.getReader();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    accumulatedContent += decoder.decode(value, { stream: true });
-
-                    // Live update for guest UI
-                    if (!user) {
-                        setLocalMessages((prev) =>
-                            prev.map((msg) =>
-                                msg.id === assistantMessageId ? { ...msg, content: accumulatedContent } : msg
-                            )
-                        );
-                    }
+                if (!result.success || typeof result.response === 'undefined') {
+                    throw new Error(result.error || "AI returned no response.");
                 }
 
-                const finalAssistantMessage: Message = {
-                    id: assistantMessageId, // Re-using ID for simplicity
-                    role: 'assistant',
-                    content: accumulatedContent,
-                    timestamp: serverTimestamp(),
-                };
+                const aiContent = result.response;
 
-                // Persist final AI message for logged-in users
                 if (user && firestore && chatId) {
-                    await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), finalAssistantMessage);
+                    // For logged-in users, we add the final AI message directly to Firestore.
+                    await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), {
+                        role: 'assistant',
+                        content: aiContent,
+                        timestamp: serverTimestamp(),
+                    });
                     await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
-                } else {
-                    // Final update for guest user, replacing placeholder
-                    setLocalMessages(prev => prev.map(msg => msg.id === assistantMessageId ? finalAssistantMessage : msg));
+                } else if (guestAssistantMessageId) {
+                    // For guests, we find the placeholder and replace it with the final message.
+                    const finalMessage: Message = { id: guestAssistantMessageId, role: 'assistant', content: aiContent };
+                    setLocalMessages(prev => prev.map(msg => msg.id === guestAssistantMessageId ? finalMessage : msg));
                 }
 
             } catch (error) {
                  const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-                 toast({
-                    variant: "destructive",
-                    title: "Error from AI",
-                    description: errorMessage,
-                });
-                // Clean up placeholder on error
-                if (!user) {
-                    setLocalMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
-                }
+                 toast({ variant: "destructive", title: "Error from AI", description: errorMessage });
+                 // If there was an error, remove the guest placeholder.
+                 if (guestAssistantMessageId) {
+                    setLocalMessages(prev => prev.filter(msg => msg.id !== guestAssistantMessageId));
+                 }
             }
         })();
     });
@@ -180,7 +158,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
             });
             const newChatId = newChatDoc.id;
             await addDoc(collection(chatCollectionRef, newChatId, 'messages'), userMessage);
-            // Redirect to the new chat page. The `useEffect` will trigger the AI response.
             router.replace(`/chat/${newChatId}`, { scroll: false });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error creating chat', description: error instanceof Error ? error.message : String(error) });
@@ -207,7 +184,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
     if (initialPrompt && !promptHandled.current && isChatEmpty) {
       handleSendMessage(initialPrompt);
       promptHandled.current = true;
-       // Clean the URL
        if (typeof window !== 'undefined') {
         const newUrl = window.location.pathname;
         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
@@ -261,8 +237,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
       const result = await generateAudioAction(text);
       if (result.success && result.response?.audio) {
         if(user && firestore && chatId) {
-            // Find the correct document to update. This assumes messageId is the Firestore document ID.
-            // This is a simplification; a more robust solution might require querying.
             const messageRef = doc(firestore, 'users', user.uid, 'chats', chatId, 'messages', messageId);
             await updateDoc(messageRef, { audio: result.response.audio });
 
@@ -358,7 +332,16 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                   {message.media && message.media.startsWith('data:image') && (
                     <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-full h-auto" />
                   )}
-                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  {message.content ? (
+                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  ) : ( isPending && message.role === 'assistant' && (
+                      <div className="flex items-center space-x-1">
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
+                      </div>
+                    )
+                  )}
                    {message.role === 'assistant' && message.content && (
                      <div className="mt-2 flex items-center gap-2">
                       {!message.audio && (
@@ -390,7 +373,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 )}
               </div>
             ))}
-             {isPending && (
+             {isPending && !user && (
               <div className="flex items-start gap-3 animate-message-in">
                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
                     <Bot className="h-5 w-5 text-primary-foreground" />
@@ -403,6 +386,20 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                   </div>
                 </div>
               </div>
+            )}
+            {isPending && user && (
+                 <div className="flex items-start gap-3 animate-message-in">
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-pulse">
+                        <Bot className="h-5 w-5 text-primary-foreground" />
+                    </div>
+                    <div className="rounded-lg p-3 max-w-2xl text-sm bg-secondary">
+                      <div className="flex items-center space-x-1">
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
+                      </div>
+                    </div>
+                 </div>
             )}
           </div>
         </ScrollArea>

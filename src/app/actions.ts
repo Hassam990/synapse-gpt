@@ -2,6 +2,11 @@
 "use server";
 
 import { synapse, generateAudio, executeCodeInSandbox, generateCodeFromPrompt } from "@/ai/flows/synapse-flow";
+import { ai } from "@/ai/genkit";
+import { googleAI } from "@genkit-ai/google-genai";
+import { Message as GenkitMessage, part, Part } from "genkit";
+
+
 export type AiMode =
   | "conversation"
   | "assistance"
@@ -24,21 +29,58 @@ export interface AiMessage {
     media?: string;
 }
 
-export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
+export async function invokeAI(systemPrompt: string, messages: AiMessage[]): Promise<{ success: boolean; response?: string; error?: string; }> {
   try {
-    // The synapse function now returns a ReadableStream directly on success.
-    const stream = await synapse(systemPrompt, messages);
-    return stream;
+    if (messages.length === 0) {
+      throw new Error("Cannot invoke AI with an empty message history.");
+    }
+
+    const latestMessage = messages[messages.length - 1];
+    const hasMedia = !!latestMessage?.media;
+
+    const modelRef = hasMedia
+      ? googleAI.model('gemini-2.5-pro')
+      : googleAI.model('gemini-2.5-flash');
+
+    const toGenkitMessages = (msgs: AiMessage[]): GenkitMessage[] => {
+      return msgs.map((message) => {
+        const parts: Part[] = [];
+        parts.push(part.text(message.content || ''));
+        if (message.media) {
+            parts.push(part.media(message.media));
+        }
+        return {
+          role: message.role === 'user' ? 'user' : 'model',
+          parts: parts,
+        };
+      });
+    };
+
+    const genkitMessages = toGenkitMessages(messages);
+    const modelHistory = genkitMessages.slice(0, -1);
+    const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
+    
+    const { text } = await ai.generate({
+      model: modelRef,
+      prompt: lastMessageParts,
+      history: modelHistory,
+      config: {
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        ],
+      },
+      system: systemPrompt,
+    });
+    
+    return { success: true, response: text };
+
   } catch (error) {
     console.error("AI invocation failed on the server:", error);
-    // This is a critical failure. Instead of throwing, we create a stream
-    // that immediately communicates the error to the client.
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during AI processing.";
-    return new ReadableStream({
-      start(controller) {
-        controller.error(new Error(errorMessage));
-      },
-    });
+    return { success: false, error: errorMessage };
   }
 }
 
