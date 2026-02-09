@@ -37,7 +37,6 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]) {
     return new ReadableStream({
       start(controller) {
         controller.error(new Error(errorMessage));
-        controller.close();
       },
     });
   }
