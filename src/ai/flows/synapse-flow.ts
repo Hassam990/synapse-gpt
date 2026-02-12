@@ -147,11 +147,12 @@ ${stdin || ''}
     prompt: userPrompt,
   });
 
-  if (!result) {
+  const textResponse = result?.text;
+  if (typeof textResponse !== 'string') {
       throw new Error("AI generation failed for code execution. Check API key and server logs.");
   }
 
-  return result.text;
+  return textResponse;
 }
 
 
@@ -163,11 +164,11 @@ export async function generateCodeFromPrompt(prompt: string, language: string): 
     system: systemPrompt,
     prompt: prompt,
   });
-
-  if (!result) {
+  
+  const text = result?.text;
+  if (typeof text !== 'string' || !text.trim()) {
       throw new Error("AI generation failed for code generation. Check API key and server logs.");
   }
-  const text = result.text;
 
   try {
     // The AI might return the JSON inside a markdown block. Clean it up.

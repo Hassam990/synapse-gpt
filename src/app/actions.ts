@@ -75,11 +75,13 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]): Pro
       system: systemPrompt,
     });
 
-    if (!result) {
-      throw new Error("AI generation failed. This might be due to a missing API key or a network issue.");
+    const textResponse = result?.text;
+
+    if (typeof textResponse !== 'string') {
+        throw new Error("AI generation failed. This might be due to a missing API key or a network issue.");
     }
     
-    return { success: true, response: result.text };
+    return { success: true, response: textResponse };
 
   } catch (error) {
     console.error("AI invocation failed on the server:", error);
