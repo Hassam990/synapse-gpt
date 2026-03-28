@@ -91,3 +91,16 @@ export async function generateCode(prompt: string, language: string): Promise<{ 
         return { success: false, error: errorMessage };
     }
 }
+
+export async function generateStudyGuide(slidesContent: string, subject: string = "OOPS"): Promise<{ success: boolean; response?: { test_sheet: any[]; explanations: any[]; }; error?: string; }> {
+    try {
+        const { generateStudyGuideFromSlides } = await import('@/ai/flows/synapse-flow');
+        const result = await generateStudyGuideFromSlides(slidesContent, subject);
+        return { success: true, response: result };
+    } catch (error) {
+        console.error("Study guide generation failed:", error);
+        const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}

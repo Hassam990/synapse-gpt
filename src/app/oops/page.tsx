@@ -508,19 +508,19 @@ function StudyInterface({
             <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0c0c0c] text-center">
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl space-y-8">
                     <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                        <Code className="h-10 w-10 text-primary" />
+                        <GraduationCap className="h-10 w-10 text-primary" />
                     </div>
                     <div className="space-y-4">
                         <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="Synapse Logo" width={250} height={60} className="mx-auto mb-4 opacity-80" />
-                        <h1 className="text-5xl font-black text-white tracking-tighter italic">CODE BUILDER</h1>
-                        <p className="text-lg text-[#666] font-medium leading-relaxed">Pakistan's First AI-Powered Cloud IDE. Write, Test, and Build in real-time. 🇵🇰</p>
+                        <h1 className="text-5xl font-black text-white tracking-tighter italic">OOPS MASTER</h1>
+                        <p className="text-lg text-[#666] font-medium leading-relaxed">Sabaq aur practice, dono ek saath. No failing anymore! 🇵🇰</p>
                     </div>
                     <Button 
                         size="lg" 
                         onClick={() => setCourseStarted(true)}
                         className="bg-primary text-black font-black px-12 py-8 rounded-2xl text-lg hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] transition-all active:scale-95"
                     >
-                        LAUNCH IDE
+                        START LEARNING
                     </Button>
                 </motion.div>
             </div>
@@ -650,6 +650,13 @@ export default function CodeBuilderPage() {
                         title="Explorer"
                     >
                         <Files className="h-6 w-6" />
+                    </div>
+                    <div 
+                        className={cn("p-2 cursor-pointer transition-colors rounded-lg", activeActivity === 'study' ? "text-primary bg-primary/5" : "text-[#555] hover:text-[#aaa]")} 
+                        onClick={() => setActiveActivity('study')}
+                        title="Study Mode"
+                    >
+                        <GraduationCap className="h-6 w-6" />
                     </div>
                     <div className="mt-auto p-2 text-[#444] hover:text-[#888] cursor-pointer">
                         <Settings className="h-6 w-6" />

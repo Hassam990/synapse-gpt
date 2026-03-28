@@ -62,10 +62,10 @@ const suggestionCards = [
     prompt: 'Explain the significance of the Lahore Resolution in simple terms.',
   },
   {
-    icon: PenSquare,
-    title: 'Creative Writing',
-    description: 'Poetry, stories, and content with Pakistani cultural context',
-    prompt: 'Write a short poem about the beauty of the Karakoram Highway.',
+    icon: Lightbulb,
+    title: 'OOPS Paper Prep',
+    description: 'Master Object Oriented Programming and avoid failing your paper! (Slides 1-10)',
+    prompt: 'Tell me more about the OOPS Mastery portal.',
   },
 ];
 
@@ -154,6 +154,16 @@ export default function Home() {
                           <SidebarMenuButton className="w-full justify-start hover:bg-white/5">
                           <Code className="mr-2 h-4 w-4" />
                           Code Builder
+                          </SidebarMenuButton>
+                        </motion.div>
+                    </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Link href="/oops" className="w-full">
+                        <motion.div whileHover={{ x: 5 }}>
+                          <SidebarMenuButton className="w-full justify-start hover:bg-white/5">
+                          <GraduationCap className="mr-2 h-4 w-4" />
+                          OOPS Preparation
                           </SidebarMenuButton>
                         </motion.div>
                     </Link>

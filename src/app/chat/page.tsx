@@ -8,6 +8,7 @@ import {
   LogOut,
   Plus,
   User,
+  GraduationCap,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -99,6 +100,14 @@ export default function ChatPage() {
                         <SidebarMenuButton className="w-full justify-start">
                         <Code className="mr-2 h-4 w-4" />
                         Code Builder
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <Link href="/oops" className="w-full">
+                        <SidebarMenuButton className="w-full justify-start">
+                        <GraduationCap className="mr-2 h-4 w-4" />
+                        OOPS Preparation
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>

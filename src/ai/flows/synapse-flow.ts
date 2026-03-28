@@ -179,3 +179,45 @@ export async function generateCodeFromPrompt(prompt: string, language: string): 
     throw new Error(`Generation Failed: ${e.message}`);
   }
 }
+
+export async function generateStudyGuideFromSlides(slidesContent: string, subject: string): Promise<{ test_sheet: any[]; explanations: any[]; }> {
+  const systemPrompt = prompts.studyGuideGenerator(subject);
+
+  if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is missing. Study guide generation requires Groq.");
+  }
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: slidesContent },
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!groqRes.ok) {
+        throw new Error(`Groq Generation Error: ${groqRes.status}`);
+    }
+
+    const groqData = await groqRes.json();
+    const text = groqData.choices?.[0]?.message?.content || "";
+
+    const parsedResult = JSON.parse(text);
+    return {
+        test_sheet: parsedResult.test_sheet || [],
+        explanations: parsedResult.explanations || []
+    };
+  } catch (e: any) {
+    console.error(">>> [StudyGuide] Error:", e);
+    throw new Error(`Study Guide Generation Failed: ${e.message}`);
+  }
+}
