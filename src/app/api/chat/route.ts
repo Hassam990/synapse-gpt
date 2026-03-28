@@ -1,6 +1,8 @@
 import { synapse } from '@/ai/flows/synapse-flow';
 import { NextRequest } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const requestId = Math.random().toString(36).substring(7);
   console.log(`>>> [API:${requestId}] Request received.`);

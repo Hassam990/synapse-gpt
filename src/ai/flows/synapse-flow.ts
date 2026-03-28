@@ -1,16 +1,10 @@
 
 'use server';
-import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
-import { Part } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
 import type { AiMessage } from '@/app/actions';
-import Groq from 'groq-sdk';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// No longer using Groq SDK to avoid build issues; using direct fetch instead.
 
 async function toWav(
   pcmData: Buffer,
@@ -94,25 +88,9 @@ export async function synapse(
 }
 
 export async function generateAudio(text: string) {
-  const ttsModel = googleAI.model('gemini-2.5-flash-preview-tts');
-
-  const { media } = await ai.generate({
-    model: ttsModel,
-    prompt: text,
-    config: {
-      responseModalities: ['AUDIO'],
-    },
-  });
-
-  if (!media) {
-    throw new Error('Audio generation failed, no media returned.');
-  }
-
-  const audioBuffer = Buffer.from(media.url.substring(media.url.indexOf(',') + 1), 'base64');
-  const wavBase64 = await toWav(audioBuffer);
-  const audioDataUri = 'data:audio/wav;base64,' + wavBase64;
-
-  return { audio: audioDataUri };
+  // Placeholder to prevent build errors while we fix dependencies
+  console.log("Audio generation requested but currently disabled for build stability:", text);
+  return { audio: null };
 }
 
 export async function executeCodeInSandbox(code: string, language: string, stdin: string): Promise<string> {
