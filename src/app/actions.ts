@@ -4,7 +4,7 @@
 import { synapse, generateAudio, executeCodeInSandbox, generateCodeFromPrompt } from "@/ai/flows/synapse-flow";
 import { ai } from "@/ai/genkit";
 import { googleAI } from "@genkit-ai/google-genai";
-import { Message as GenkitMessage, part, Part } from "genkit";
+import { Message as GenkitMessage, Part } from "genkit";
 
 
 export type AiMode =
@@ -35,53 +35,18 @@ export async function invokeAI(systemPrompt: string, messages: AiMessage[]): Pro
       throw new Error("Cannot invoke AI with an empty message history.");
     }
 
-    const latestMessage = messages[messages.length - 1];
-    const hasMedia = !!latestMessage?.media;
+    const stream = await synapse(systemPrompt, messages);
+    const reader = stream.getReader();
+    const decoder = new TextEncoder();
+    let fullResponse = "";
 
-    const modelRef = hasMedia
-      ? googleAI.model('gemini-2.5-pro')
-      : googleAI.model('gemini-2.5-flash');
-
-    const toGenkitMessages = (msgs: AiMessage[]): GenkitMessage[] => {
-      return msgs.map((message) => {
-        const parts: Part[] = [];
-        parts.push(part.text(message.content || ''));
-        if (message.media) {
-            parts.push(part.media(message.media));
-        }
-        return {
-          role: message.role === 'user' ? 'user' : 'model',
-          parts: parts,
-        };
-      });
-    };
-
-    const genkitMessages = toGenkitMessages(messages);
-    const modelHistory = genkitMessages.slice(0, -1);
-    const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
-    
-    const result = await ai.generate({
-      model: modelRef,
-      prompt: lastMessageParts,
-      history: modelHistory,
-      config: {
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      },
-      system: systemPrompt,
-    });
-
-    const textResponse = result?.text;
-
-    if (typeof textResponse !== 'string') {
-        throw new Error("AI generation failed. This might be due to a missing API key or a network issue.");
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      fullResponse += new TextDecoder().decode(value);
     }
     
-    return { success: true, response: textResponse };
+    return { success: true, response: fullResponse };
 
   } catch (error) {
     console.error("AI invocation failed on the server:", error);

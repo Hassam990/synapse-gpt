@@ -39,6 +39,8 @@ import { signInAsGuest } from '@/firebase/non-blocking-login';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signInWithGoogle } from '@/firebase/auth-actions';
+import { SlidingNumber } from '@/components/animate-ui/primitives/texts/sliding-number';
+import { motion } from 'framer-motion';
 
 const suggestionCards = [
   {
@@ -123,9 +125,13 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
-        <Sidebar collapsible="icon" className="border-r border-border/20">
-          <SidebarHeader>
+      <div className="flex min-h-screen w-full bg-[#050505] text-white relative overflow-hidden mesh-gradient">
+        {/* Animated background elements for glass effect depth */}
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/20 rounded-full blur-[160px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-primary/10 rounded-full blur-[160px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
+        
+        <Sidebar collapsible="icon" className="glass border-r border-white/10 z-50">
+          <SidebarHeader className="border-b border-white/5 py-4">
             <Link href="/" className="flex items-center gap-2 px-2">
               <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
             </Link>
@@ -134,128 +140,184 @@ export default function Home() {
              <SidebarMenu>
                  <SidebarMenuItem>
                     <Link href="/chat" className="w-full">
-                        <SidebarMenuButton className="w-full justify-start">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Chat
-                        </SidebarMenuButton>
+                        <motion.div whileHover={{ x: 5 }}>
+                          <SidebarMenuButton className="w-full justify-start hover:bg-white/5">
+                          <Plus className="mr-2 h-4 w-4" />
+                          New Chat
+                          </SidebarMenuButton>
+                        </motion.div>
                     </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <Link href="/code-builder" className="w-full">
-                        <SidebarMenuButton className="w-full justify-start">
-                        <Code className="mr-2 h-4 w-4" />
-                        Code Builder
-                        </SidebarMenuButton>
+                        <motion.div whileHover={{ x: 5 }}>
+                          <SidebarMenuButton className="w-full justify-start hover:bg-white/5">
+                          <Code className="mr-2 h-4 w-4" />
+                          Code Builder
+                          </SidebarMenuButton>
+                        </motion.div>
                     </Link>
                 </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter>
+          <SidebarFooter className="border-t border-white/5">
              <div className="flex items-center justify-between p-2">
               {isUserLoading ? (
                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <Skeleton className="h-9 w-9 rounded-full bg-white/5" />
                     <div className="flex flex-col gap-1">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-4 w-20 bg-white/5" />
+                      <Skeleton className="h-3 w-16 bg-white/5" />
                     </div>
                   </div>
               ) : user ? (
                 <div className="flex items-center gap-2 w-full">
-                  <Avatar className="h-9 w-9">
+                  <Avatar className="h-9 w-9 ring-2 ring-primary/20">
                      {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
                     <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                        {user.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col flex-grow">
-                    <p className="text-sm font-semibold truncate">{user.displayName || 'Anonymous User'}</p>
+                  <div className="flex flex-col flex-grow min-w-0">
+                    <p className="text-sm font-semibold truncate text-foreground">{user.displayName || 'Anonymous User'}</p>
                     <p className="text-xs text-muted-foreground">{user.isAnonymous ? "Guest" : "Member"}</p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign Out" className="hover:text-destructive hover:bg-destructive/10">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
                 </div>
               ) : (
                   <div className="w-full space-y-2">
-                    <Button onClick={handleGoogleLogin} className="w-full">
-                      <GoogleIcon className="mr-2 h-5 w-5" />
-                      Sign In with Google
-                    </Button>
-                    <Button variant="secondary" onClick={handleGuestLogin} className="w-full">
-                      <User className="mr-2 h-4 w-4" />
-                      Continue as Guest
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button onClick={handleGoogleLogin} className="w-full glass border-white/10 hover:bg-white/5 text-foreground justify-start text-xs sm:text-sm">
+                        <GoogleIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="truncate">Sign In with Google</span>
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button variant="secondary" onClick={handleGuestLogin} className="w-full glass border-white/10 hover:bg-white/5 text-foreground justify-start text-xs sm:text-sm">
+                        <User className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="truncate">Continue as Guest</span>
+                      </Button>
+                    </motion.div>
                   </div>
               )}
             </div>
           </SidebarFooter>
         </Sidebar>
-
-        <SidebarInset>
-            <div className="flex flex-col h-screen">
-                <header className="p-4 flex justify-end md:hidden flex-shrink-0">
+        
+        <SidebarInset className="bg-transparent flex-1 w-full min-w-0 overflow-hidden relative">
+            <div className="flex flex-col h-full w-full min-w-0">
+                <header className="p-4 flex justify-end md:hidden flex-shrink-0 absolute top-0 right-0 z-50">
                     <SidebarTrigger />
                 </header>
-                <main className="flex-1 overflow-y-auto p-4">
-                    <div className="flex flex-col items-center text-center mb-8">
-                        <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-4" />
-                        <p className="text-lg md:text-xl text-foreground/80 mt-1">
-                        Pakistan’s First GPT
-                        </p>
-                        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                        <Lightbulb className="h-4 w-4 text-primary" />
-                        <span>Built with innovation. Designed for the future.</span>
+                <main className="flex-1 w-full overflow-y-auto p-4 md:p-8">
+                    <motion.div 
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="flex flex-col items-center text-center mb-12"
+                    >
+                        <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-6 drop-shadow-2xl" />
+                        <div className="flex items-center justify-center gap-2 text-xl md:text-2xl text-foreground font-semibold tracking-tight">
+                            <span>Pakistan’s</span>
+                            <SlidingNumber number={1} className="text-primary" />
+                            <span>st GPT</span>
                         </div>
-                    </div>
+                        <motion.div 
+                          className="flex items-center gap-2 mt-4 text-primary font-medium px-4 py-1 rounded-full glass border-primary/20"
+                          animate={{ opacity: [0.7, 1, 0.7] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Lightbulb className="h-4 w-4" />
+                          <span className="text-sm">Built with innovation. Designed for the future.</span>
+                        </motion.div>
+                    </motion.div>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-                        <div className="bg-secondary/50 border border-border/30 rounded-lg p-6 text-center flex flex-col">
-                            <h3 className="text-lg font-semibold text-foreground">A Message from the Creator</h3>
-                            <p className="text-muted-foreground mt-2">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
+                        <motion.div 
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                          className="glass-panel p-8 rounded-3xl text-center flex flex-col items-center justify-center space-y-4 border-white/10"
+                        >
+                            <h3 className="text-2xl font-bold text-foreground">A Message from the Creator</h3>
+                            <p className="text-muted-foreground leading-relaxed">
                             There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
                             </p>
-                            <p className="font-urdu text-2xl font-bold text-primary mt-4">
-                            سمجھو آپ کا ہر روپیہ اہم ہے
-                            </p>
+                            <div className="p-4 bg-primary/5 rounded-2xl w-full border border-primary/10">
+                              <p className="font-urdu text-3xl font-bold text-primary">
+                              سمجھو آپ کا ہر روپیہ اہم ہے
+                              </p>
+                            </div>
                             
-                            <div className="text-left mt-4 bg-background/50 rounded-md p-4 text-sm space-y-2">
-                            <p><span className="font-semibold text-foreground/90">Account Title:</span> <span className="text-muted-foreground">Al Khidmat Foundation Pakistan</span></p>
-                            <p><span className="font-semibold text-foreground/90">Bank Name:</span> <span className="text-muted-foreground">Meezan Bank</span></p>
-                            <p><span className="font-semibold text-foreground/90">IBAN:</span> <span className="text-muted-foreground">PK35MEZN0002140100861151</span></p>
-                            <p><span className="font-semibold text-foreground/90">Swift Code:</span> <span className="text-muted-foreground">MEZNPKKA</span></p>
+                            <div className="text-left w-full glass rounded-2xl p-6 text-sm space-y-3 border-white/5">
+                              <p className="flex justify-between"><span className="font-semibold text-muted-foreground">Account Title:</span> <span className="text-foreground text-right">Al Khidmat Foundation Pakistan</span></p>
+                              <p className="flex justify-between"><span className="font-semibold text-muted-foreground">Bank Name:</span> <span className="text-foreground">Meezan Bank</span></p>
+                              <p className="flex justify-between items-center gap-2"><span className="font-semibold text-muted-foreground shrink-0">IBAN:</span> <span className="text-primary font-mono truncate">PK35MEZN0002140100861151</span></p>
+                              <p className="flex justify-between"><span className="font-semibold text-muted-foreground">Swift Code:</span> <span className="text-foreground">MEZNPKKA</span></p>
                             </div>
 
-                            <Button onClick={handleCopyIBAN} className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
-                            DONATE NOW (Copy IBAN)
-                            </Button>
-                        </div>
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
+                              <Button onClick={handleCopyIBAN} className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+                                DONATE NOW (Copy IBAN)
+                              </Button>
+                            </motion.div>
+                        </motion.div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <motion.div 
+                          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                          initial="hidden"
+                          animate="show"
+                          variants={{
+                            hidden: { opacity: 0 },
+                            show: {
+                              opacity: 1,
+                              transition: { staggerChildren: 0.1, delayChildren: 0.3 }
+                            }
+                          }}
+                        >
                             {suggestionCards.map((card, index) => (
-                            <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} key={index} className="bg-secondary/50 border border-border/30 rounded-lg p-4 hover:bg-secondary transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 cursor-pointer text-left h-full flex flex-col">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <card.icon className="h-6 w-6 text-primary" />
-                                    <h3 className="font-semibold text-foreground">{card.title}</h3>
-                                </div>
-                                <p className="text-sm text-muted-foreground flex-grow">{card.description}</p>
-                            </Link>
+                            <motion.div key={index} variants={{ hidden: { opacity: 0, scale: 0.9 }, show: { opacity: 1, scale: 1 } }} className="h-full">
+                              <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} className="glass-panel p-6 rounded-3xl hover:bg-white/5 transition-all duration-300 border-white/5 cursor-pointer text-left h-full flex flex-col group">
+                                  <div className="flex items-center gap-4 mb-3">
+                                      <div className="p-3 rounded-2xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-primary-foreground transition-all">
+                                        <card.icon className="h-6 w-6" />
+                                      </div>
+                                      <h3 className="font-bold text-lg text-foreground tracking-tight">{card.title}</h3>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground flex-grow leading-relaxed">{card.description}</p>
+                              </Link>
+                            </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     </div>
                 </main>
-                <footer className="p-4 w-full flex justify-center border-t border-border/20 flex-shrink-0">
-                    <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl mx-auto">
+                <motion.footer 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="p-6 w-full flex justify-center flex-shrink-0"
+                >
+                    <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl mx-auto group">
                         <Input
-                        name="prompt"
-                        placeholder="Write a business proposal for a tech startup in Karachi"
-                        className="w-full bg-secondary pr-12 h-12 rounded-full"
+                          name="prompt"
+                          placeholder="Write a business proposal for a tech startup in Karachi"
+                          className="w-full glass bg-black/10 backdrop-blur-xl border-white/10 h-16 rounded-3xl focus-visible:ring-primary focus-visible:ring-offset-0 px-8 text-lg shadow-2xl"
                         />
-                        <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
-                        <Send className="h-4 w-4" />
-                        </Button>
+                        <motion.div 
+                          whileHover={{ scale: 1.1 }} 
+                          whileTap={{ scale: 0.9 }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          <Button type="submit" size="icon" className="h-10 w-12 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
+                            <Send className="h-5 w-5" />
+                          </Button>
+                        </motion.div>
                     </form>
-                </footer>
+                </motion.footer>
             </div>
         </SidebarInset>
       </div>

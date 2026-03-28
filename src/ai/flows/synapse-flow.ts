@@ -2,10 +2,15 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { Message as GenkitMessage, part, Part } from 'genkit';
+import { Part } from 'genkit';
 import wav from 'wav';
 import { prompts } from '@/app/prompts';
 import type { AiMessage } from '@/app/actions';
+import Groq from 'groq-sdk';
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 async function toWav(
   pcmData: Buffer,
@@ -38,74 +43,53 @@ export async function synapse(
     throw new Error("Cannot invoke AI with an empty message history.");
   }
 
-  const latestMessage = history[history.length - 1];
-  const hasMedia = !!latestMessage?.media;
-
-  const modelRef = hasMedia
-    ? googleAI.model('gemini-2.5-pro')
-    : googleAI.model('gemini-2.5-flash');
-
-  const toGenkitMessages = (messages: AiMessage[]): GenkitMessage[] => {
-    return messages.map((message) => {
-      const parts: Part[] = [];
-      
-      // Genkit requires a text part, even if it's empty for media messages.
-      parts.push(part.text(message.content || ''));
-
-      if (message.media) {
-          parts.push(part.media(message.media));
-      }
-      
-      return {
-        role: message.role === 'user' ? 'user' : 'model',
-        parts: parts,
-      };
-    });
-  };
-
-  const genkitMessages = toGenkitMessages(history);
-  const modelHistory = genkitMessages.slice(0, -1);
-  const lastMessageParts = genkitMessages[genkitMessages.length - 1].parts;
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is missing. Chat requires Groq for high-performance quota-free operation.");
+  }
 
   try {
-    const { stream } = await ai.generateStream({
-      model: modelRef,
-      prompt: lastMessageParts,
-      history: modelHistory,
-      config: {
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      },
-      system: systemPrompt,
-    });
+    const groqMessages = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'assistant' as any,
+      content: msg.content,
+    }));
 
-    // Return a new ReadableStream that processes the AI's output stream
+    console.log(">>> [Synapse] Dispatching to Groq Llama 3.3 70B...");
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...groqMessages,
+          ],
+        }),
+      }).catch(err => {
+        console.error(">>> [Synapse:FETCH_CRITICAL]", err);
+        throw new Error(`Direct Fetch to Groq Failed: ${err.message || err}`);
+      });
+
+    if (!groqRes.ok) {
+        const errorText = await groqRes.text();
+        throw new Error(`Groq API Status ${groqRes.status}: ${errorText}`);
+    }
+
+    const groqData = await groqRes.json();
+    const content = groqData.choices?.[0]?.message?.content || "";
+    console.log(">>> [Synapse] Groq response received successfully.");
+
     return new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-              controller.enqueue(new TextEncoder().encode(text));
-            }
-          }
-          controller.close();
-        } catch (error) {
-          console.error("Error during AI stream processing:", error);
-          const errorMessage = error instanceof Error ? error.message : 'An error occurred while processing the AI response.';
-          controller.error(new Error(errorMessage));
-        }
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(content));
+        controller.close();
       },
     });
-
-  } catch(e) {
-    // If ai.generateStream itself fails, re-throw the error to be caught by the server action.
-    console.error("Failed to start AI stream generation:", e);
-    throw e;
+  } catch (e: any) {
+    console.error(">>> [Synapse] FATAL Chat Error:", e);
+    throw new Error(`Chat Engine Failure: ${e.message}`);
   }
 }
 
@@ -142,45 +126,78 @@ Stdin:
 ${stdin || ''}
 `;
 
-  const result = await ai.generate({
-    system: systemPrompt,
-    prompt: userPrompt,
-  });
-
-  const textResponse = result?.text;
-  if (typeof textResponse !== 'string') {
-      throw new Error("AI generation failed for code execution. Check API key and server logs.");
+  if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is missing. Code execution requires Groq.");
   }
 
-  return textResponse;
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!groqRes.ok) {
+        throw new Error(`Groq Execution Error: ${groqRes.status}`);
+    }
+
+    const groqData = await groqRes.json();
+    return groqData.choices?.[0]?.message?.content || "";
+  } catch (e: any) {
+    console.error(">>> [Sandbox] Execution Error:", e);
+    throw new Error(`Execution Failed: ${e.message}`);
+  }
 }
 
 
 export async function generateCodeFromPrompt(prompt: string, language: string): Promise<{ code: string; stdin: string; }> {
   const systemPrompt = prompts.codeGenerator(language);
 
-  const result = await ai.generate({
-    model: googleAI.model('gemini-2.5-pro'),
-    system: systemPrompt,
-    prompt: prompt,
-  });
-  
-  const text = result?.text;
-  if (typeof text !== 'string' || !text.trim()) {
-      throw new Error("AI generation failed for code generation. Check API key and server logs.");
+  if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is missing. Code generation requires Groq.");
   }
 
   try {
-    // The AI might return the JSON inside a markdown block. Clean it up.
-    const cleanedJson = text.replace(/```json\n?/g, '').replace(/```/g, '');
-    const parsedResult = JSON.parse(cleanedJson);
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!groqRes.ok) {
+        throw new Error(`Groq Generation Error: ${groqRes.status}`);
+    }
+
+    const groqData = await groqRes.json();
+    const text = groqData.choices?.[0]?.message?.content || "";
+
+    // The AI returns JSON as per response_format
+    const parsedResult = JSON.parse(text);
     return {
         code: parsedResult.code || '',
         stdin: parsedResult.stdin || ''
     };
-  } catch (e) {
-    console.error("Failed to parse AI response for code generation. Falling back to raw text.", e);
-    // Fallback: if the AI just returned raw code, use that.
-    return { code: text, stdin: '' };
+  } catch (e: any) {
+    console.error(">>> [Generator] Error:", e);
+    throw new Error(`Generation Failed: ${e.message}`);
   }
 }

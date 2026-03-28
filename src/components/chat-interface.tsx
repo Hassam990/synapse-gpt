@@ -2,6 +2,7 @@
 "use client";
 
 import { AiMode, invokeAI, Message, generateAudioAction, AiMessage } from "@/app/actions";
+import { synapse } from "@/ai/flows/synapse-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +18,7 @@ import { Bot, User, Send, Paperclip, Mic, Loader, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from 'uuid';
+import { motion, AnimatePresence } from 'framer-motion';
 import { prompts, buildUserProfileContext, Language, UserProfileContext } from "@/app/prompts";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -97,26 +99,55 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                     ...(media && { media }),
                 }));
                 
-                const result = await invokeAI(systemPrompt, messagesForAI);
+                const aiMessageId = user ? uuidv4() : guestAssistantMessageId!;
                 
-                if (!result.success || typeof result.response === 'undefined') {
-                    throw new Error(result.error || "AI returned no response.");
+                // Fetch from the new API route instead of direct server action to avoid serialization errors
+                const response = await fetch('/api/chat', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ systemPrompt, messages: messagesForAI }),
+                });
+
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || "Failed to start AI stream.");
                 }
 
-                const aiContent = result.response;
+                const reader = response.body?.getReader();
+                if (!reader) throw new Error("No reader available for the AI stream.");
+
+                const decoder = new TextDecoder();
+                let accumulatedContent = "";
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  
+                  const chunk = decoder.decode(value, { stream: true });
+                  accumulatedContent += chunk;
+
+                  if (user && firestore && chatId) {
+                    // Update the UI via local state for real-time streaming feel even for logged-in users
+                    setLocalMessages(prev => {
+                      const exists = prev.find(m => m.id === aiMessageId);
+                      if (exists) {
+                        return prev.map(m => m.id === aiMessageId ? { ...m, content: accumulatedContent } : m);
+                      }
+                      return [...prev, { id: aiMessageId, role: 'assistant', content: accumulatedContent }];
+                    });
+                  } else if (guestAssistantMessageId) {
+                    setLocalMessages(prev => prev.map(msg => msg.id === guestAssistantMessageId ? { ...msg, content: accumulatedContent } : msg));
+                  }
+                }
 
                 if (user && firestore && chatId) {
-                    // For logged-in users, we add the final AI message directly to Firestore.
+                    // Final sync to Firestore
                     await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), {
                         role: 'assistant',
-                        content: aiContent,
+                        content: accumulatedContent,
                         timestamp: serverTimestamp(),
                     });
                     await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
-                } else if (guestAssistantMessageId) {
-                    // For guests, we find the placeholder and replace it with the final message.
-                    const finalMessage: Message = { id: guestAssistantMessageId, role: 'assistant', content: aiContent };
-                    setLocalMessages(prev => prev.map(msg => msg.id === guestAssistantMessageId ? finalMessage : msg));
                 }
 
             } catch (error) {
@@ -159,13 +190,17 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
             const newChatId = newChatDoc.id;
             await addDoc(collection(chatCollectionRef, newChatId, 'messages'), userMessage);
             router.replace(`/chat/${newChatId}`, { scroll: false });
+            // For new chats, trigger AI with just the first message
+            await triggerAIResponse([userMessage]);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error creating chat', description: error instanceof Error ? error.message : String(error) });
         }
-      } else { // This is an existing chat
+      } else if (chatId) { // This is an existing chat
           try {
             await addDoc(collection(firestore, 'users', user.uid, 'chats', chatId, 'messages'), userMessage);
             await updateDoc(doc(firestore, 'users', user.uid, 'chats', chatId), { lastMessageTimestamp: serverTimestamp() });
+            // For existing chats, trigger AI with context
+            await triggerAIResponse([...messages, userMessage]);
           } catch (error) {
              toast({ variant: 'destructive', title: 'Error sending message', description: error instanceof Error ? error.message : String(error) });
           }
@@ -175,8 +210,10 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         ? [userMessage]
         : [...messages, userMessage];
       setLocalMessages(newMessages);
+      // For guests, trigger AI
+      await triggerAIResponse(newMessages);
     }
-  }, [isPending, user, firestore, chatId, router, toast, messages]);
+  }, [isPending, user, firestore, chatId, router, toast, messages, triggerAIResponse]);
 
   // Effect to handle initial prompt from homepage
   useEffect(() => {
@@ -199,13 +236,6 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         ]);
     }
   }, [chatId, messages.length, isLoadingMessages]);
-
-  // Effect to trigger AI response when a new user message is added
-  useEffect(() => {
-    if (!isPending && messages.length > 0 && messages[messages.length - 1].role === 'user') {
-      triggerAIResponse(messages);
-    }
-  }, [messages, isPending, triggerAIResponse]);
   
   // Effect to scroll to bottom on new messages
   useEffect(() => {
@@ -270,108 +300,131 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   };
   
   return (
-    <div className="w-full h-full flex flex-col bg-background">
-      <header className="p-4 border-b border-border/20 flex flex-col sm:flex-row justify-center items-center gap-4">
-        <Select
-          value={selectedMode}
-          onValueChange={(value) => setSelectedMode(value as AiMode)}
-        >
-          <SelectTrigger className="w-full sm:w-[280px] bg-secondary border-border/50">
-            <SelectValue placeholder="Select a mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="conversation">Intelligent Conversation</SelectItem>
-            <SelectItem value="assistance">Personalized Assistance</SelectItem>
-            <SelectItem value="information">Information Tool</SelectItem>
-            <SelectItem value="gpt">Full GPT Access</SelectItem>
-          </SelectContent>
-        </Select>
-         <Select
-          value={selectedLanguage}
-          onValueChange={(value) => setSelectedLanguage(value as Language)}
-        >
-          <SelectTrigger className="w-full sm:w-[180px] bg-secondary border-border/50">
-            <SelectValue placeholder="Select language" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="roman-urdu">Roman Urdu</SelectItem>
-            <SelectItem value="english">English</SelectItem>
-            <SelectItem value="pashto">Pashto</SelectItem>
-            <SelectItem value="sindhi">Sindhi</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="w-full h-full flex flex-col bg-transparent relative">
+      <header className="sticky top-4 w-[98%] glass rounded-3xl p-3 border-white/20 flex flex-row justify-between items-center gap-2 z-50 shadow-2xl mt-4 self-center">
+        <div className="flex items-center gap-2 flex-grow overflow-hidden px-2">
+            <Select
+            value={selectedMode}
+            onValueChange={(value) => setSelectedMode(value as AiMode)}
+            >
+            <motion.div whileHover={{ scale: 1.02 }} className="w-full">
+                <SelectTrigger className="w-full bg-transparent border-none text-foreground text-sm h-8 hover:bg-white/5 transition-colors focus:ring-0">
+                <SelectValue placeholder="Mode" />
+                </SelectTrigger>
+            </motion.div>
+            <SelectContent className="glass border-white/10 rounded-2xl">
+                <SelectItem value="conversation">Synapse 1.1 (Standard)</SelectItem>
+                <SelectItem value="assistance">Synapse Ultra (Creative)</SelectItem>
+                <SelectItem value="information">Synapse Lite (Fast)</SelectItem>
+                <SelectItem value="gpt">Synapse Pro (Advanced)</SelectItem>
+            </SelectContent>
+            </Select>
+            <div className="w-[1px] h-4 bg-white/10" />
+            <Select
+            value={selectedLanguage}
+            onValueChange={(value) => setSelectedLanguage(value as Language)}
+            >
+            <motion.div whileHover={{ scale: 1.02 }} className="w-full">
+                <SelectTrigger className="w-full bg-transparent border-none text-foreground text-sm h-8 hover:bg-white/5 transition-colors focus:ring-0">
+                <SelectValue placeholder="Language" />
+                </SelectTrigger>
+            </motion.div>
+            <SelectContent className="glass border-white/10 rounded-2xl">
+                <SelectItem value="roman-urdu">Roman Urdu</SelectItem>
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="pashto">Pashto</SelectItem>
+                <SelectItem value="sindhi">Sindhi</SelectItem>
+            </SelectContent>
+            </Select>
+        </div>
       </header>
 
-      <main className="flex-grow overflow-hidden">
+      <main className="flex-grow w-full overflow-hidden relative">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-6 p-4 w-full max-w-4xl mx-auto">
+          <div className="space-y-6 p-4 md:p-8 w-full pb-40">
             {isLoadingMessages && (
                  <div className="flex justify-center items-center h-full p-8">
                     <Loader className="h-6 w-6 animate-spin" />
                  </div>
             )}
             {messages.map((message, index) => (
-              <div
+              <motion.div
                 key={message.id || index}
-                className={cn("flex items-start gap-3 animate-message-in",
-                  message.role === "user" ? "justify-end" : ""
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className={cn("flex items-start gap-4 w-full",
+                  message.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
                 {message.role === "assistant" && (
-                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                        <Bot className="h-5 w-5 text-primary-foreground" />
-                    </div>
+                    <motion.div 
+                      whileHover={{ scale: 1.1, rotate: 10 }}
+                      className="flex-shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20 z-10"
+                    >
+                        <Bot className="h-6 w-6 md:h-7 md:w-7 text-primary-foreground" />
+                    </motion.div>
                 )}
                 <div
-                  className={`rounded-lg p-3 max-w-[90%] sm:max-w-[80%] md:max-w-[70%] text-sm ${
+                  className={cn(
+                    "rounded-3xl p-4 md:p-5 w-fit max-w-[85%] shadow-2xl transition-all duration-300 relative group",
                     message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary"
-                  }`}
+                      ? "bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground font-medium shadow-primary/30 ml-auto rounded-tr-sm border border-white/10"
+                      : "bg-white/5 text-white shadow-black/40 rounded-tl-sm border border-white/10 backdrop-blur-md hover:bg-white/10 transition-colors"
+                  )}
                 >
                   {message.media && message.media.startsWith('data:image') && (
-                    <img src={message.media} alt="Uploaded content" className="rounded-md mb-2 max-w-full h-auto" />
+                    <motion.img 
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      src={message.media} 
+                      alt="Uploaded content" 
+                      className="rounded-2xl mb-3 max-w-full h-auto border border-white/10 shadow-lg" 
+                    />
                   )}
                   {message.content ? (
-                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                     <div className="prose prose-invert max-w-none text-sm md:text-base leading-relaxed">
+                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                     </div>
                   ) : ( isPending && message.role === 'assistant' && (
-                      <div className="flex items-center space-x-1">
-                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
-                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse [animation-delay:-0.15s]"></span>
-                        <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
+                      <div className="flex items-center space-x-2 py-2 px-1">
+                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce"></span>
                       </div>
                     )
                   )}
                    {message.role === 'assistant' && message.content && (
-                     <div className="mt-2 flex items-center gap-2">
+                     <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3"
+                     >
                       {!message.audio && (
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleGenerateAudio(message.id!, message.content)}
                           disabled={audioLoading === message.id}
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                           aria-label="Generate audio"
                         >
                           {audioLoading === message.id ? (
-                            <Loader className="h-4 w-4 animate-spin" />
+                            <Loader className="h-4 w-4 animate-spin text-primary" />
                           ) : (
                             <Volume2 className="h-4 w-4" />
                           )}
                         </Button>
                       )}
                       {message.audio && (
-                        <audio controls src={message.audio} className="w-full max-w-xs h-10" />
+                        <div className="w-full bg-white/5 rounded-2xl p-2 border border-white/10">
+                            <audio controls src={message.audio} className="w-full h-8 opacity-70 hover:opacity-100 transition-opacity" />
+                        </div>
                       )}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
-                {message.role === "user" && (
-                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="h-5 w-5 text-foreground" />
-                    </div>
-                )}
-              </div>
+              </motion.div>
             ))}
              {isPending && !user && (
               <div className="flex items-start gap-3 animate-message-in">
@@ -405,45 +458,73 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         </ScrollArea>
       </main>
 
-      <footer className="p-4 border-t border-border/20">
-        <form onSubmit={handleSubmit} className="w-full flex items-center gap-2 max-w-4xl mx-auto">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 flex-shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Attach file"
-          >
-            <Paperclip className="h-5 w-5"/>
-          </Button>
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            disabled={isPending}
-            className="flex-grow bg-secondary h-12 rounded-full focus-visible:ring-primary pr-4"
-          />
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon" 
-            className="h-10 w-10 flex-shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Use microphone"
-          >
-            <Mic className="h-5 w-5"/>
-          </Button>
-          <Button type="submit" disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 rounded-full" size="icon" aria-label="Send message">
-            <Send className="h-5 w-5"/>
-          </Button>
-        </form>
+      <footer className="sticky bottom-0 w-full flex justify-center pb-8 pt-4 px-4 bg-gradient-to-t from-background via-background/80 to-transparent">
+        <div className="max-w-4xl w-full">
+            <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="bg-secondary/40 backdrop-blur-3xl border border-white/10 p-2 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] group focus-within:border-primary/30 transition-all duration-300"
+            >
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept="image/*"
+                    />
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                        aria-label="Attach file"
+                    >
+                        <Paperclip className="h-5 w-5"/>
+                    </Button>
+                    
+                    <div className="relative flex-grow">
+                        <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Ask anything..."
+                        disabled={isPending}
+                        className="w-full bg-transparent border-none h-11 px-2 text-sm md:text-base focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pr-1">
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                            aria-label="Use microphone"
+                        >
+                            <Mic className="h-5 w-5"/>
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} 
+                            className={cn(
+                                "h-11 w-11 rounded-full transition-all duration-300 shadow-xl",
+                                isPending || (!input.trim() && !fileInputRef.current?.files?.length)
+                                    ? "bg-muted text-muted-foreground"
+                                    : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20 hover:scale-105 active:scale-95"
+                            )}
+                            size="icon" 
+                            aria-label="Send message"
+                        >
+                            {isPending ? <Loader className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5"/>}
+                        </Button>
+                    </div>
+                </form>
+            </motion.div>
+            <p className="text-[10px] text-center mt-3 text-muted-foreground/50 font-medium tracking-tight">
+                SYNAPSE may provide inaccurate information. Verify important details.
+            </p>
+        </div>
       </footer>
     </div>
   );
