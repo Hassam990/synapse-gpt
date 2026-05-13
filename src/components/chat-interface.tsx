@@ -301,7 +301,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
   
   return (
     <div className="w-full h-full flex flex-col bg-transparent relative">
-      <header className="sticky top-4 w-[98%] glass rounded-3xl p-3 border-white/20 flex flex-row justify-between items-center gap-2 z-50 shadow-2xl mt-4 self-center">
+      <header className="sticky top-2 w-[96%] glass rounded-3xl p-2 sm:p-3 border-white/20 flex flex-row justify-between items-center gap-1 sm:gap-2 z-50 shadow-2xl mt-2 sm:mt-4 self-center">
         <div className="flex items-center gap-2 flex-grow overflow-hidden px-2">
             <Select
             value={selectedMode}
@@ -341,7 +341,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
 
       <main className="flex-grow w-full overflow-hidden relative">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-6 p-4 md:p-8 w-full pb-40">
+          <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-8 w-full pb-32 sm:pb-40">
             {isLoadingMessages && (
                  <div className="flex justify-center items-center h-full p-8">
                     <Loader className="h-6 w-6 animate-spin" />
@@ -353,7 +353,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className={cn("flex items-start gap-4 w-full",
+                className={cn("flex items-start gap-2 sm:gap-4 w-full",
                   message.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
@@ -367,7 +367,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                 )}
                 <div
                   className={cn(
-                    "rounded-3xl p-4 md:p-5 w-fit max-w-[85%] shadow-2xl transition-all duration-300 relative group",
+                    "rounded-3xl p-3 sm:p-4 md:p-5 w-fit max-w-[85%] sm:max-w-[85%] shadow-2xl transition-all duration-300 relative group",
                     message.role === "user"
                       ? "bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground font-medium shadow-primary/30 ml-auto rounded-tr-sm border border-white/10"
                       : "bg-white/5 text-white shadow-black/40 rounded-tl-sm border border-white/10 backdrop-blur-md hover:bg-white/10 transition-colors"
@@ -458,14 +458,14 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
         </ScrollArea>
       </main>
 
-      <footer className="sticky bottom-0 w-full flex justify-center pb-8 pt-4 px-4 bg-gradient-to-t from-background via-background/80 to-transparent">
+      <footer className="sticky bottom-0 w-full flex justify-center pb-4 sm:pb-8 pt-2 sm:pt-4 px-3 sm:px-4 bg-gradient-to-t from-background via-background/80 to-transparent">
         <div className="max-w-4xl w-full">
             <motion.div 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="bg-secondary/40 backdrop-blur-3xl border border-white/10 p-2 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] group focus-within:border-primary/30 transition-all duration-300"
+                className="bg-secondary/40 backdrop-blur-3xl border border-white/10 p-1.5 sm:p-2 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] group focus-within:border-primary/30 transition-all duration-300"
             >
-                <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <form onSubmit={handleSubmit} className="flex items-center gap-1 sm:gap-2">
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -478,10 +478,10 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                         variant="ghost" 
                         size="icon" 
                         onClick={() => fileInputRef.current?.click()}
-                        className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                        className="h-10 w-10 sm:h-11 sm:w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
                         aria-label="Attach file"
                     >
-                        <Paperclip className="h-5 w-5"/>
+                        <Paperclip className="h-4 w-4 sm:h-5 sm:w-5"/>
                     </Button>
                     
                     <div className="relative flex-grow">
@@ -499,16 +499,16 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                             type="button" 
                             variant="ghost" 
                             size="icon" 
-                            className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+                            className="h-10 w-10 sm:h-11 sm:w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all hidden sm:flex"
                             aria-label="Use microphone"
                         >
-                            <Mic className="h-5 w-5"/>
+                            <Mic className="h-4 w-4 sm:h-5 sm:w-5"/>
                         </Button>
                         <Button 
                             type="submit" 
                             disabled={isPending || (!input.trim() && !fileInputRef.current?.files?.length)} 
                             className={cn(
-                                "h-11 w-11 rounded-full transition-all duration-300 shadow-xl",
+                                "h-10 w-10 sm:h-11 sm:w-11 rounded-full transition-all duration-300 shadow-xl",
                                 isPending || (!input.trim() && !fileInputRef.current?.files?.length)
                                     ? "bg-muted text-muted-foreground"
                                     : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20 hover:scale-105 active:scale-95"
@@ -516,7 +516,7 @@ export default function ChatInterface({ initialPrompt, chatId }: { initialPrompt
                             size="icon" 
                             aria-label="Send message"
                         >
-                            {isPending ? <Loader className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5"/>}
+                            {isPending ? <Loader className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <Send className="h-4 w-4 sm:h-5 sm:w-5"/>}
                         </Button>
                     </div>
                 </form>

@@ -133,7 +133,7 @@ export default function Home() {
         <Sidebar collapsible="icon" className="glass border-r border-white/10 z-50">
           <SidebarHeader className="border-b border-white/5 py-4">
             <Link href="/" className="flex items-center gap-2 px-2">
-              <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={160} height={40} />
+              <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={120} height={30} className="w-auto h-auto max-w-[140px]" />
             </Link>
           </SidebarHeader>
           <SidebarContent className="p-2">
@@ -223,47 +223,47 @@ export default function Home() {
                 <header className="p-4 flex justify-end md:hidden flex-shrink-0 absolute top-0 right-0 z-50">
                     <SidebarTrigger />
                 </header>
-                <main className="flex-1 w-full overflow-y-auto p-4 md:p-8">
+                <main className="flex-1 w-full overflow-y-auto p-4 sm:p-6 lg:p-8">
                     <motion.div 
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5 }}
-                      className="flex flex-col items-center text-center mb-12"
+                      className="flex flex-col items-center text-center mb-8 sm:mb-12"
                     >
-                        <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={400} height={100} className="mb-6 drop-shadow-2xl" />
-                        <div className="flex items-center justify-center gap-2 text-xl md:text-2xl text-foreground font-semibold tracking-tight">
+                        <Image src="https://raw.githubusercontent.com/Hassam990/synapse/refs/heads/main/Synapse.png" alt="SynapseGPT Logo" width={250} height={60} className="mb-6 drop-shadow-2xl w-auto h-auto max-w-[300px] sm:max-w-[400px]" />
+                        <div className="flex items-center justify-center gap-2 text-lg sm:text-xl md:text-2xl text-foreground font-semibold tracking-tight">
                             <span>Pakistan’s</span>
                             <SlidingNumber number={1} className="text-primary" />
                             <span>st GPT</span>
                         </div>
                         <motion.div 
-                          className="flex items-center gap-2 mt-4 text-primary font-medium px-4 py-1 rounded-full glass border-primary/20"
+                          className="flex items-center gap-2 mt-4 text-primary font-medium px-3 py-1 sm:px-4 rounded-full glass border-primary/20"
                           animate={{ opacity: [0.7, 1, 0.7] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
-                          <Lightbulb className="h-4 w-4" />
-                          <span className="text-sm">Built with innovation. Designed for the future.</span>
+                          <Lightbulb className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">Built with innovation. Designed for the future.</span>
                         </motion.div>
                     </motion.div>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 w-full max-w-6xl mx-auto">
                         <motion.div 
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.5, delay: 0.2 }}
-                          className="glass-panel p-8 rounded-3xl text-center flex flex-col items-center justify-center space-y-4 border-white/10"
+                          className="glass-panel p-6 sm:p-8 rounded-3xl text-center flex flex-col items-center justify-center space-y-4 border-white/10"
                         >
-                            <h3 className="text-2xl font-bold text-foreground">A Message from the Creator</h3>
-                            <p className="text-muted-foreground leading-relaxed">
+                            <h3 className="text-xl sm:text-2xl font-bold text-foreground">A Message from the Creator</h3>
+                            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                             There are no upgrades for Synapse. If you want to support my work and help me grow, please consider donating to the people of Palestine.
                             </p>
-                            <div className="p-4 bg-primary/5 rounded-2xl w-full border border-primary/10">
-                              <p className="font-urdu text-3xl font-bold text-primary">
+                            <div className="p-3 sm:p-4 bg-primary/5 rounded-2xl w-full border border-primary/10">
+                              <p className="font-urdu text-2xl sm:text-3xl font-bold text-primary">
                               سمجھو آپ کا ہر روپیہ اہم ہے
                               </p>
                             </div>
                             
-                            <div className="text-left w-full glass rounded-2xl p-6 text-sm space-y-3 border-white/5">
+                            <div className="text-left w-full glass rounded-2xl p-4 sm:p-6 text-xs sm:text-sm space-y-2 sm:space-y-3 border-white/5">
                               <p className="flex justify-between"><span className="font-semibold text-muted-foreground">Account Title:</span> <span className="text-foreground text-right">Al Khidmat Foundation Pakistan</span></p>
                               <p className="flex justify-between"><span className="font-semibold text-muted-foreground">Bank Name:</span> <span className="text-foreground">Meezan Bank</span></p>
                               <p className="flex justify-between items-center gap-2"><span className="font-semibold text-muted-foreground shrink-0">IBAN:</span> <span className="text-primary font-mono truncate">PK35MEZN0002140100861151</span></p>
@@ -271,7 +271,7 @@ export default function Home() {
                             </div>
 
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
-                              <Button onClick={handleCopyIBAN} className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+                              <Button onClick={handleCopyIBAN} className="w-full h-12 sm:h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
                                 DONATE NOW (Copy IBAN)
                               </Button>
                             </motion.div>
@@ -291,14 +291,14 @@ export default function Home() {
                         >
                             {suggestionCards.map((card, index) => (
                             <motion.div key={index} variants={{ hidden: { opacity: 0, scale: 0.9 }, show: { opacity: 1, scale: 1 } }} className="h-full">
-                              <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} className="glass-panel p-6 rounded-3xl hover:bg-white/5 transition-all duration-300 border-white/5 cursor-pointer text-left h-full flex flex-col group">
-                                  <div className="flex items-center gap-4 mb-3">
-                                      <div className="p-3 rounded-2xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-primary-foreground transition-all">
-                                        <card.icon className="h-6 w-6" />
+                              <Link href={`/chat?prompt=${encodeURIComponent(card.prompt)}`} className="glass-panel p-4 sm:p-6 rounded-3xl hover:bg-white/5 transition-all duration-300 border-white/5 cursor-pointer text-left h-full flex flex-col group">
+                                  <div className="flex items-center gap-3 sm:gap-4 mb-3">
+                                      <div className="p-2 sm:p-3 rounded-2xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-primary-foreground transition-all">
+                                        <card.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                                       </div>
-                                      <h3 className="font-bold text-lg text-foreground tracking-tight">{card.title}</h3>
+                                      <h3 className="font-bold text-base sm:text-lg text-foreground tracking-tight">{card.title}</h3>
                                   </div>
-                                  <p className="text-sm text-muted-foreground flex-grow leading-relaxed">{card.description}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground flex-grow leading-relaxed">{card.description}</p>
                               </Link>
                             </motion.div>
                             ))}
@@ -309,21 +309,21 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
-                  className="p-6 w-full flex justify-center flex-shrink-0"
+                  className="p-4 sm:p-6 w-full flex justify-center flex-shrink-0"
                 >
                     <form onSubmit={handlePromptSubmit} className="relative w-full max-w-4xl mx-auto group">
                         <Input
                           name="prompt"
                           placeholder="Write a business proposal for a tech startup in Karachi"
-                          className="w-full glass bg-black/10 backdrop-blur-xl border-white/10 h-16 rounded-3xl focus-visible:ring-primary focus-visible:ring-offset-0 px-8 text-lg shadow-2xl"
+                          className="w-full glass bg-black/10 backdrop-blur-xl border-white/10 h-14 sm:h-16 rounded-3xl focus-visible:ring-primary focus-visible:ring-offset-0 px-6 sm:px-8 text-base sm:text-lg shadow-2xl"
                         />
                         <motion.div 
                           whileHover={{ scale: 1.1 }} 
                           whileTap={{ scale: 0.9 }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                          className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2"
                         >
-                          <Button type="submit" size="icon" className="h-10 w-12 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
-                            <Send className="h-5 w-5" />
+                          <Button type="submit" size="icon" className="h-9 w-10 sm:h-10 sm:w-12 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
+                            <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                           </Button>
                         </motion.div>
                     </form>

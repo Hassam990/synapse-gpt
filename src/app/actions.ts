@@ -18,7 +18,7 @@ export interface Message {
     role: "user" | "assistant";
     content: string;
     media?: string; // data URI for images
-    audio?: string; // data URI for audio
+    audio?: string | null; // data URI for audio or null
     timestamp?: any;
 }
 

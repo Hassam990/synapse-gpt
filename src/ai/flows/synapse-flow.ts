@@ -47,38 +47,80 @@ export async function synapse(
       content: msg.content,
     }));
 
-    console.log(">>> [Synapse] Dispatching to Groq Llama 3.3 70B...");
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...groqMessages,
-          ],
-        }),
-      }).catch(err => {
-        console.error(">>> [Synapse:FETCH_CRITICAL]", err);
-        throw new Error(`Direct Fetch to Groq Failed: ${err.message || err}`);
-      });
+    console.log(">>> [Synapse] Dispatching to Groq Llama 3.3 70B with streaming...");
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...groqMessages,
+        ],
+        stream: true,
+      }),
+    }).catch(err => {
+      console.error(">>> [Synapse:FETCH_CRITICAL]", err);
+      throw new Error(`Direct Fetch to Groq Failed: ${err.message || err}`);
+    });
 
     if (!groqRes.ok) {
-        const errorText = await groqRes.text();
-        throw new Error(`Groq API Status ${groqRes.status}: ${errorText}`);
+      const errorText = await groqRes.text();
+      throw new Error(`Groq API Status ${groqRes.status}: ${errorText}`);
     }
 
-    const groqData = await groqRes.json();
-    const content = groqData.choices?.[0]?.message?.content || "";
-    console.log(">>> [Synapse] Groq response received successfully.");
+    console.log(">>> [Synapse] Stream started, processing chunks...");
+    const encoder = new TextEncoder();
 
     return new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode(content));
-        controller.close();
+      async start(controller) {
+        try {
+          const reader = groqRes.body?.getReader();
+          if (!reader) {
+            controller.close();
+            return;
+          }
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (trimmedLine.startsWith('data: ')) {
+                const dataStr = trimmedLine.slice(6);
+                if (dataStr === '[DONE]') continue;
+
+                try {
+                  const data = JSON.parse(dataStr);
+                  const delta = data.choices?.[0]?.delta?.content;
+                  if (delta) {
+                    controller.enqueue(encoder.encode(delta));
+                  }
+                } catch (e) {
+                  console.warn(">>> [Synapse] Failed to parse chunk:", dataStr);
+                }
+              }
+            }
+          }
+
+          console.log(">>> [Synapse] Stream completed successfully.");
+        } catch (e) {
+          console.error(">>> [Synapse] Stream Error:", e);
+        } finally {
+          controller.close();
+        }
       },
     });
   } catch (e: any) {
